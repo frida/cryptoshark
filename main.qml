@@ -32,25 +32,18 @@ ApplicationWindow {
                 id: devices
                 TableViewColumn { role: "name"; title: "Name"; width: 100 }
                 TableViewColumn { role: "type"; title: "Type"; width: 50 }
-                model: Frida.devices
+                model: deviceModel
             }
             Item {
                 width: processes.width
                 height: processes.height
                 TableView {
                     id: processes
-                    TableViewColumn { role: "pid"; title: "Pid"; width: 25 }
+                    sortIndicatorVisible: true
+                    TableViewColumn { role: "pid"; title: "Pid"; width: 50 }
                     TableViewColumn { role: "name"; title: "Name"; width: 100 }
-                    model: currentDevice ? currentDevice.processes.items : null
+                    model: currentDevice ? currentDevice.processes.items.filter(function (p) { return p.name === "cat"; }) : null
                     onActivated: {
-                        var script = Frida.scripts.createFromUrl(Qt.resolvedUrl("./cryptoshark.js"));
-                        script.onError.connect(function (message) {
-                            errorDialog.text = message;
-                            errorDialog.open();
-                        });
-                        script.onMessage.connect(function (message, data) {
-                            console.log("woot message=" + JSON.stringify(message) + " data=" + data);
-                        });
                         currentDevice.inject(script, model[currentRow].pid);
                     }
                 }
@@ -58,13 +51,6 @@ ApplicationWindow {
                     anchors.centerIn: parent
                     running: currentDevice ? currentDevice.processes.isLoading : false
                 }
-            }
-            TableView {
-                id: scripts
-                TableViewColumn { role: "source"; title: "Source"; width: 150 }
-                TableViewColumn { role: "pid"; title: "Pid"; width: 50 }
-                TableViewColumn { role: "status"; title: "Status"; width: 50 }
-                model: Frida.scripts.items
             }
         }
 
@@ -77,5 +63,25 @@ ApplicationWindow {
         id: errorDialog
         title: "Error"
         icon: StandardIcon.Critical
+    }
+
+    DeviceListModel {
+        id: deviceModel
+    }
+
+    Script {
+        id: script
+        url: Qt.resolvedUrl("./cryptoshark.js")
+
+        onStatusChanged: {
+            console.log("onStatusChanged: " + newStatus);
+        }
+        onError: {
+            errorDialog.text = message;
+            errorDialog.open();
+        }
+        onMessage: {
+            console.log("woot object=" + JSON.stringify(object) + " data=" + data);
+        }
     }
 }
