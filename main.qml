@@ -11,8 +11,6 @@ ApplicationWindow {
     height: 480
     title: qsTr("Hello World")
 
-    property variant currentDevice: devices.currentRow !== -1 ? devices.model[devices.currentRow] : null
-
     menuBar: MenuBar {
         Menu {
             title: qsTr("File")
@@ -42,15 +40,19 @@ ApplicationWindow {
                     sortIndicatorVisible: true
                     TableViewColumn { role: "pid"; title: "Pid"; width: 50 }
                     TableViewColumn { role: "name"; title: "Name"; width: 100 }
-                    model: currentDevice ? currentDevice.processes.items.filter(function (p) { return p.name === "cat"; }) : null
+                    model: processModel
                     onActivated: {
-                        currentDevice.inject(script, model[currentRow].pid);
+                        deviceModel.get(devices.currentRow).inject(script, model[currentRow].pid);
                     }
                 }
                 BusyIndicator {
                     anchors.centerIn: parent
-                    running: currentDevice ? currentDevice.processes.isLoading : false
+                    running: processModel.isLoading
                 }
+            }
+            Button {
+                text: "Refresh"
+                onClicked: processModel.refresh()
             }
         }
 
@@ -67,6 +69,11 @@ ApplicationWindow {
 
     DeviceListModel {
         id: deviceModel
+    }
+
+    ProcessListModel {
+        id: processModel
+        device: devices.currentRow !== -1 ? deviceModel.get(devices.currentRow) : null
     }
 
     Script {
