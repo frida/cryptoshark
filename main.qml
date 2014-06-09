@@ -42,7 +42,7 @@ ApplicationWindow {
                     TableViewColumn { role: "name"; title: "Name"; width: 100 }
                     model: processModel
                     onActivated: {
-                        deviceModel.get(devices.currentRow).inject(script, model[currentRow].pid);
+                        deviceModel.get(devices.currentRow).inject(script, processModel.get(currentRow).pid);
                     }
                 }
                 BusyIndicator {
