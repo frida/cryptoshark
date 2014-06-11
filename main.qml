@@ -54,6 +54,12 @@ ApplicationWindow {
                 text: "Refresh"
                 onClicked: processModel.refresh()
             }
+            TableView {
+                id: instances
+                TableViewColumn { role: "status"; title: "Status"; width: 100 }
+                TableViewColumn { role: "pid"; title: "Pid"; width: 100 }
+                model: script.instances
+            }
         }
 
         Button {
@@ -74,6 +80,10 @@ ApplicationWindow {
     ProcessListModel {
         id: processModel
         device: devices.currentRow !== -1 ? deviceModel.get(devices.currentRow) : null
+        onError: {
+            errorDialog.text = message;
+            errorDialog.open();
+        }
     }
 
     Script {
