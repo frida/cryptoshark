@@ -60,6 +60,28 @@ ApplicationWindow {
                 TableViewColumn { role: "pid"; title: "Pid"; width: 100 }
                 model: script.instances
             }
+            Row {
+                Button {
+                    text: "Stop"
+                    enabled: script.instances.length > 0 && instances.currentRow !== -1
+                    onClicked: script.instances[instances.currentRow].stop()
+                }
+                Button {
+                    text: "Post"
+                    enabled: script.instances.length > 0 && instances.currentRow !== -1
+                    onClicked: script.instances[instances.currentRow].post({snake: 1337});
+                }
+            }
+            Row {
+                Button {
+                    text: "Stop all"
+                    onClicked: script.stop()
+                }
+                Button {
+                    text: "Post all"
+                    onClicked: script.post({badger: 1234});
+                }
+            }
         }
 
         Button {
