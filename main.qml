@@ -28,6 +28,14 @@ ApplicationWindow {
         Column {
             TableView {
                 id: devices
+                TableViewColumn {
+                    role: "icon";
+                    width: 16
+                    delegate: Image {
+                        source: styleData.value
+                        fillMode: Image.Pad
+                    }
+                }
                 TableViewColumn { role: "name"; title: "Name"; width: 100 }
                 TableViewColumn { role: "type"; title: "Type"; width: 50 }
                 model: deviceModel
@@ -38,6 +46,14 @@ ApplicationWindow {
                 TableView {
                     id: processes
                     sortIndicatorVisible: true
+                    TableViewColumn {
+                        role: "smallIcon";
+                        width: 16
+                        delegate: Image {
+                            source: styleData.value
+                            fillMode: Image.Pad
+                        }
+                    }
                     TableViewColumn { role: "pid"; title: "Pid"; width: 50 }
                     TableViewColumn { role: "name"; title: "Name"; width: 100 }
                     model: processModel
@@ -120,7 +136,7 @@ ApplicationWindow {
             errorDialog.open();
         }
         onMessage: {
-            console.log("woot object=" + JSON.stringify(object) + " data=" + data);
+            console.log("[device='" + sender.device.name + "' pid=" + sender.pid + "] received object=" + JSON.stringify(object) + " data=" + data);
         }
     }
 }
