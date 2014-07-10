@@ -28,6 +28,7 @@ ApplicationWindow {
         Column {
             TableView {
                 id: devices
+                width: parent.width
                 TableViewColumn {
                     role: "icon";
                     width: 16
@@ -37,14 +38,14 @@ ApplicationWindow {
                     }
                 }
                 TableViewColumn { role: "name"; title: "Name"; width: 100 }
-                TableViewColumn { role: "type"; title: "Type"; width: 50 }
                 model: deviceModel
             }
             Item {
-                width: processes.width
+                width: parent.width
                 height: processes.height
                 TableView {
                     id: processes
+                    width: parent.width
                     sortIndicatorVisible: true
                     TableViewColumn {
                         role: "smallIcon";
@@ -72,11 +73,13 @@ ApplicationWindow {
             }
             TableView {
                 id: instances
+                width: parent.width
                 TableViewColumn { role: "status"; title: "Status"; width: 100 }
                 TableViewColumn { role: "pid"; title: "Pid"; width: 100 }
                 model: script.instances
             }
             Row {
+                width: parent.width
                 Button {
                     text: "Stop"
                     enabled: script.instances.length > 0 && instances.currentRow !== -1
@@ -89,6 +92,7 @@ ApplicationWindow {
                 }
             }
             Row {
+                width: parent.width
                 Button {
                     text: "Stop all"
                     onClicked: script.stop()
@@ -101,7 +105,7 @@ ApplicationWindow {
         }
 
         Button {
-            text: "Hello: " + Device.Tether
+            text: "Hello"
         }
     }
 
