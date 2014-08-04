@@ -1,127 +1,97 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.1
-import QtQuick.Dialogs 1.1
-
+import QtQuick.Dialogs 1.2
+import QtQuick.Window 2.0
 import Frida 1.0
 
 ApplicationWindow {
-    id: app
-    visible: true
+    title: qsTr("CryptoShark")
     width: 640
     height: 480
-    title: qsTr("Hello World")
+    visible: true
 
     menuBar: MenuBar {
         Menu {
             title: qsTr("File")
             MenuItem {
+                text: qsTr("Attach")
+                onTriggered: processSelector.visible = true
+            }
+            MenuItem {
                 text: qsTr("Exit")
-                onTriggered: Qt.quit();
+                onTriggered: Qt.quit()
             }
         }
     }
 
-    SplitView {
-        anchors.fill: parent
-        orientation: Qt.Horizontal
+    Component.onCompleted: {
+        processSelector.visible = true;
+    }
 
-        Column {
-            TableView {
-                id: devices
-                width: parent.width
-                TableViewColumn {
-                    role: "icon";
-                    width: 16
-                    delegate: Image {
-                        source: styleData.value
-                        fillMode: Image.Pad
-                    }
-                }
-                TableViewColumn { role: "name"; title: "Name"; width: 100 }
-                model: deviceModel
-            }
-            Item {
-                width: parent.width
-                height: processes.height
-                TableView {
-                    id: processes
-                    width: parent.width
-                    sortIndicatorVisible: true
-                    TableViewColumn {
-                        role: "smallIcon";
-                        width: 16
-                        delegate: Image {
-                            source: styleData.value
-                            fillMode: Image.Pad
-                        }
-                    }
-                    TableViewColumn { role: "pid"; title: "Pid"; width: 50 }
-                    TableViewColumn { role: "name"; title: "Name"; width: 100 }
-                    model: processModel
-                    onActivated: {
-                        deviceModel.get(devices.currentRow).inject(script, processModel.get(currentRow).pid);
-                    }
-                }
-                BusyIndicator {
-                    anchors.centerIn: parent
-                    running: processModel.isLoading
+    TableView {
+        id: threads
+        height: parent.height
+
+        TableViewColumn { role: "id"; title: "Thread ID"; width: 63 }
+        TableViewColumn { role: "tags"; title: "Tags"; width: 100 }
+
+        model: threadsModel
+    }
+
+    Dialog {
+        id: processSelector
+        height: 270
+        title: qsTr("Choose target process:")
+        modality: Qt.WindowModal
+        standardButtons: AbstractDialog.Ok | AbstractDialog.Cancel
+
+        TableView {
+            id: processes
+            width: parent.width
+            height: 200
+
+            TableViewColumn {
+                role: "smallIcon"
+                width: 16
+                delegate: Image {
+                    source: styleData.value
+                    fillMode: Image.Pad
                 }
             }
-            Button {
-                text: "Refresh"
-                onClicked: processModel.refresh()
-            }
-            TableView {
-                id: instances
-                width: parent.width
-                TableViewColumn { role: "status"; title: "Status"; width: 100 }
-                TableViewColumn { role: "pid"; title: "Pid"; width: 100 }
-                model: script.instances
-            }
-            Row {
-                width: parent.width
-                Button {
-                    text: "Stop"
-                    enabled: script.instances.length > 0 && instances.currentRow !== -1
-                    onClicked: script.instances[instances.currentRow].stop()
-                }
-                Button {
-                    text: "Post"
-                    enabled: script.instances.length > 0 && instances.currentRow !== -1
-                    onClicked: script.instances[instances.currentRow].post({snake: 1337});
-                }
-            }
-            Row {
-                width: parent.width
-                Button {
-                    text: "Stop all"
-                    onClicked: script.stop()
-                }
-                Button {
-                    text: "Post all"
-                    onClicked: script.post({badger: 1234});
-                }
+            TableViewColumn { role: "pid"; title: "Pid"; width: 50 }
+            TableViewColumn { role: "name"; title: "Name"; width: 100 }
+
+            model: processModel
+
+            onActivated: {
+                processSelector.close();
+                processSelector._attachToSelected();
             }
         }
 
-        Button {
-            text: "Hello"
+        onAccepted: {
+            _attachToSelected();
+        }
+
+        function _attachToSelected() {
+            var currentRow = processes.currentRow;
+            if (currentRow !== -1) {
+                Frida.localSystem.inject(script, processModel.get(currentRow).pid);
+            }
         }
     }
 
     MessageDialog {
         id: errorDialog
-        title: "Error"
-        icon: StandardIcon.Critical
     }
 
-    DeviceListModel {
-        id: deviceModel
+    ListModel {
+        id: threadsModel
     }
 
     ProcessListModel {
         id: processModel
-        device: devices.currentRow !== -1 ? deviceModel.get(devices.currentRow) : null
+        device: Frida.localSystem
         onError: {
             errorDialog.text = message;
             errorDialog.open();
@@ -130,17 +100,34 @@ ApplicationWindow {
 
     Script {
         id: script
-        url: Qt.resolvedUrl("./cryptoshark.js")
-
-        onStatusChanged: {
-            console.log("onStatusChanged: " + newStatus);
-        }
+        url: Qt.resolvedUrl("./agent.js")
         onError: {
             errorDialog.text = message;
             errorDialog.open();
         }
         onMessage: {
-            console.log("[device='" + sender.device.name + "' pid=" + sender.pid + "] received object=" + JSON.stringify(object) + " data=" + data);
+            if (object.type === 'send') {
+                var event = object.payload;
+                switch (event.name) {
+                    case 'threads:update':
+                        event.threads.forEach(function (thread) {
+                            threadsModel.append({id: thread.id, tags: thread.tags.join(', ')});
+                        });
+                        break;
+                    case 'thread:update':
+                        var updatedThread = event.thread;
+                        var updatedThreadId = updatedThread.id;
+                        var count = threadsModel.count;
+                        for (var i = 0; i !== count; i++) {
+                            var thread = threadsModel.get(i);
+                            if (thread.id === updatedThreadId) {
+                                threadsModel.set(i, {id: updatedThread.id, tags: updatedThread.tags.join(', ')});
+                                break;
+                            }
+                        }
+                        break;
+                }
+            }
         }
     }
 }

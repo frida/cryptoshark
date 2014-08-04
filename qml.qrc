@@ -1,6 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
-        <file>cryptoshark.js</file>
+        <file>agent.js</file>
     </qresource>
 </RCC>
