@@ -1,6 +1,7 @@
 import QtQuick 2.2
-import QtQuick.Controls 1.1
+import QtQuick.Controls 1.2
 import QtQuick.Dialogs 1.2
+import QtQuick.Layouts 1.1
 import QtQuick.Window 2.0
 import Frida 1.0
 
@@ -31,37 +32,80 @@ ApplicationWindow {
         processSelector.visible = true;
     }
 
-    Column {
-        height: parent.height
-        TableView {
-            id: threads
-            height: parent.height - functions.height - actions.height
+    SplitView {
+        anchors.fill: parent
+        orientation: Qt.Horizontal
 
-            TableViewColumn { role: "status"; title: ""; width: 20 }
-            TableViewColumn { role: "id"; title: "Thread ID"; width: 63 }
-            TableViewColumn { role: "tags"; title: "Tags"; width: 100 }
+        Item {
+            width: sidebar.implicitWidth
+            Layout.minimumWidth: 5
 
-            model: threadsModel
-        }
-        TableView {
-            id: functions
+            ColumnLayout {
+                id: sidebar
+                spacing: 5
 
-            TableViewColumn { role: "address"; title: "Function"; width: 63 }
-            TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
-            TableViewColumn { role: "threads"; title: "Thread IDs"; width: 63 }
-
-            model: functionsModel
-        }
-        Row {
-            id: actions
-            Button {
-                text: qsTr("Probe")
-                enabled: threads.currentRow !== -1 && threadsModel.get(threads.currentRow).status === ''
-                onClicked: {
-                    var index = threads.currentRow;
-                    threadsModel.setProperty(index, 'status', 'P');
-                    script.post({name: 'thread:probe', thread: {id: threadsModel.get(index).id}});
+                anchors {
+                    fill: parent
+                    margins: 1
                 }
+
+                TableView {
+                    id: threads
+                    Layout.fillWidth: true
+
+                    TableViewColumn { role: "status"; title: ""; width: 20 }
+                    TableViewColumn { role: "id"; title: "Thread ID"; width: 63 }
+                    TableViewColumn { role: "tags"; title: "Tags"; width: 100 }
+
+                    model: threadsModel
+                }
+                Row {
+                    id: actions
+                    Layout.fillWidth: true
+
+                    Button {
+                        text: qsTr("Probe")
+                        enabled: threadsModel.get(threads.currentRow) !== undefined && threadsModel.get(threads.currentRow).status === ''
+                        onClicked: {
+                            var index = threads.currentRow;
+                            threadsModel.setProperty(index, 'status', 'P');
+                            script.probe(threadsModel.get(index).id);
+                        }
+                    }
+                }
+                TableView {
+                    id: functions
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    TableViewColumn { role: "name"; title: "Function"; width: 63 }
+                    TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
+                    TableViewColumn { role: "threads"; title: "Thread IDs"; width: 70 }
+
+                    model: functionsModel
+
+                    onCurrentRowChanged: {
+                        var func = model.get(currentRow);
+                        if (func) {
+                            script.disassemble(func.address, function (instructions) {
+                                code.render(instructions);
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        TextArea {
+            id: code
+
+            readOnly: true
+
+            function render(instructions) {
+                var lines = instructions.map(function (insn) {
+                    return insn.address + "\t" + insn.mnemonic + " " + insn.opStr;
+                });
+                text = lines.join("\n");
             }
         }
     }
@@ -133,53 +177,97 @@ ApplicationWindow {
     Script {
         id: script
         url: Qt.resolvedUrl("./agent.js")
+
         property var _functions: Object()
+        property var _requests: Object()
+        property var _nextRequestId: 1
+
+        function probe(threadId, callback) {
+            _request('thread:probe', {id: threadId}, callback);
+        }
+
+        function disassemble(address, callback) {
+            _request('function:disassemble', {address: address}, callback);
+        }
+
+        function _request(name, payload, callback) {
+            _requests[_nextRequestId] = callback || function () {};
+            post({id: _nextRequestId, name: name, payload: payload});
+            _nextRequestId++;
+        }
+
+        function _onThreadsUpdate(threads) {
+            threads.forEach(function (thread) {
+                threadsModel.append({id: thread.id, tags: thread.tags.join(', '), status: ''});
+            });
+        }
+
+        function _onThreadUpdate(updatedThread) {
+            var updatedThreadId = updatedThread.id;
+            var count = threadsModel.count;
+            for (var i = 0; i !== count; i++) {
+                var thread = threadsModel.get(i);
+                if (thread.id === updatedThreadId) {
+                    threadsModel.setProperty(i, 'tags', updatedThread.tags.join(', '));
+                    break;
+                }
+            }
+        }
+
+        function _onThreadSummary(thread, summary) {
+            for (var address in summary) {
+                if (summary.hasOwnProperty(address)) {
+                    var entry = summary[address];
+                    var index = _functions[address];
+                    if (!index) {
+                        index = functionsModel.count;
+                        _functions[address] = index;
+                        functionsModel.append({
+                            name: entry.symbol ? entry.symbol.module + "+0x" + entry.symbol.offset.toString(16) : address,
+                            address: address,
+                            calls: entry.count,
+                            threads: "" + thread.id,
+                            symbol: entry.symbol
+                        });
+                    } else {
+                        functionsModel.setProperty(index, 'calls', functionsModel.get(index).calls + entry.count);
+                    }
+                }
+            }
+        }
+
         onError: {
             errorDialog.text = message;
             errorDialog.open();
         }
         onMessage: {
             if (object.type === 'send') {
-                var event = object.payload;
-                switch (event.name) {
+                var id = object.payload.id;
+                if (id) {
+                    var callback = _requests[id];
+                    delete _requests[id];
+                    callback(object.payload.payload);
+                    return;
+                }
+
+                var stanza = object.payload;
+                var payload = stanza.payload;
+                switch (stanza.name) {
                     case 'threads:update':
-                        event.threads.forEach(function (thread) {
-                            threadsModel.append({id: thread.id, tags: thread.tags.join(', '), status: ''});
-                        });
+                        _onThreadsUpdate(payload);
                         break;
                     case 'thread:update':
-                        var updatedThread = event.thread;
-                        var updatedThreadId = updatedThread.id;
-                        var count = threadsModel.count;
-                        for (var i = 0; i !== count; i++) {
-                            var thread = threadsModel.get(i);
-                            if (thread.id === updatedThreadId) {
-                                threadsModel.setProperty(i, 'tags', updatedThread.tags.join(', '));
-                                break;
-                            }
-                        }
+                        _onThreadUpdate(payload);
                         break;
                      case 'thread:summary':
-                         var summary = event.summary;
-                         for (var address in summary) {
-                             if (summary.hasOwnProperty(address)) {
-                                 var entry = summary[address];
-                                 var index = _functions[address];
-                                 if (!index) {
-                                     index = functionsModel.count;
-                                     _functions[address] = index;
-                                     functionsModel.append({
-                                         address: entry.symbol ? entry.symbol.module + "+0x" + entry.symbol.offset.toString(16) : address,
-                                         calls: entry.count,
-                                         threads: "" + event.thread.id
-                                     });
-                                 } else {
-                                     functionsModel.setProperty(index, 'calls', functionsModel.get(index).calls + entry.count);
-                                 }
-                             }
-                         }
+                         _onThreadSummary(payload.thread, payload.summary);
+                         break;
+                     default:
+                         console.log('Unhandled: ' + JSON.stringify(stanza));
                          break;
                 }
+            } else {
+                console.log('ERROR: ' + JSON.stringify(object));
             }
         }
     }

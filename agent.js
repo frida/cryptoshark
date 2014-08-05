@@ -6,9 +6,14 @@
     const moduleMap = [];
     const addrCache = {};
 
-    function onEvent(event) {
-        if (event.name === 'thread:probe') {
-            let threadId = event.thread.id;
+    const unconditionalBranches = {
+        'jmp': true,
+        'ret': true
+    };
+
+    const stanzaHandlers = {
+        'thread:probe': function (thread, reply) {
+            let threadId = thread.id;
             Stalker.follow(threadId, {
                 events: {
                     call: true,
@@ -25,14 +30,41 @@
                             };
                         }
                     }
-                    send({name: 'thread:summary', thread: {id: threadId}, summary: enrichedSummary});
+                    send({name: 'thread:summary', payload: {thread: {id: threadId}, summary: enrichedSummary}});
                 }
             });
-        }
+            reply({});
+        },
+        'function:disassemble': function (func, reply) {
+            const result = [];
 
-        recv(onEvent);
+            let address = ptr(func.address);
+            while (result.length < 100) {
+                const insn = Instruction.parse(address);
+                if (insn === null) {
+                    break;
+                }
+                result.push(insn);
+
+                if (unconditionalBranches[insn.mnemonic]) {
+                    break;
+                }
+
+                address = insn.next;
+            }
+
+            reply(result);
+        }
+    };
+
+    function onStanza(stanza) {
+        stanzaHandlers[stanza.name](stanza.payload, function (reply) {
+            send({id: stanza.id, payload: reply});
+        });
+
+        recv(onStanza);
     }
-    recv(onEvent);
+    recv(onStanza);
 
     initModuleMap()
     .then(sendThreads)
@@ -143,7 +175,7 @@
                     threads.push({id: thread.id, tags: []});
                 },
                 onComplete: function () {
-                    send({name: 'threads:update', threads: threads});
+                    send({name: 'threads:update', payload: threads});
                     resolve();
                 }
             });
@@ -199,7 +231,7 @@
             }
             if (tags.indexOf(tag) === -1) {
                 tags.push(tag);
-                send({name: 'thread:update', thread: {id: threadId, tags: tags}});
+                send({name: 'thread:update', payload: {id: threadId, tags: tags}});
             }
         }
     }
