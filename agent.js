@@ -6,8 +6,6 @@
     const moduleMap = [];
     const addrCache = {};
 
-    let tried = false;
-
     function onEvent(event) {
         if (event.name === 'thread:probe') {
             let threadId = event.thread.id;
