@@ -1,3 +1,21 @@
+function onEvent(event) {
+    if (event.name === 'thread:probe') {
+        Stalker.follow(event.threadId, {
+            events: {
+                call: true,
+                ret: false,
+                exec: false
+            },
+            onCallSummary: function () {
+                console.log('summary!');
+            }
+        });
+    }
+
+    recv(onEvent);
+}
+recv(onEvent);
+
 sendThreads(function () {
     var apis = [
         {

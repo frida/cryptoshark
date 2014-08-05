@@ -15,7 +15,10 @@ ApplicationWindow {
             title: qsTr("File")
             MenuItem {
                 text: qsTr("Attach")
-                onTriggered: processSelector.visible = true
+                onTriggered: {
+                    processModel.refresh();
+                    processSelector.visible = true;
+                }
             }
             MenuItem {
                 text: qsTr("Exit")
@@ -28,14 +31,30 @@ ApplicationWindow {
         processSelector.visible = true;
     }
 
-    TableView {
-        id: threads
+    Column {
         height: parent.height
+        TableView {
+            id: threads
+            height: parent.height - actions.height
 
-        TableViewColumn { role: "id"; title: "Thread ID"; width: 63 }
-        TableViewColumn { role: "tags"; title: "Tags"; width: 100 }
+            TableViewColumn { role: "status"; title: ""; width: 20 }
+            TableViewColumn { role: "id"; title: "Thread ID"; width: 63 }
+            TableViewColumn { role: "tags"; title: "Tags"; width: 100 }
 
-        model: threadsModel
+            model: threadsModel
+        }
+        Row {
+            id: actions
+            Button {
+                text: qsTr("Probe")
+                enabled: threads.currentRow !== -1 && threadsModel.get(threads.currentRow).status === ''
+                onClicked: {
+                    var index = threads.currentRow;
+                    threadsModel.setProperty(index, 'status', 'P');
+                    script.post({name: 'thread:probe', threadId: threadsModel.get(index).id});
+                }
+            }
+        }
     }
 
     Dialog {
@@ -111,7 +130,7 @@ ApplicationWindow {
                 switch (event.name) {
                     case 'threads:update':
                         event.threads.forEach(function (thread) {
-                            threadsModel.append({id: thread.id, tags: thread.tags.join(', ')});
+                            threadsModel.append({id: thread.id, tags: thread.tags.join(', '), status: ''});
                         });
                         break;
                     case 'thread:update':
@@ -121,7 +140,7 @@ ApplicationWindow {
                         for (var i = 0; i !== count; i++) {
                             var thread = threadsModel.get(i);
                             if (thread.id === updatedThreadId) {
-                                threadsModel.set(i, {id: updatedThread.id, tags: updatedThread.tags.join(', ')});
+                                threadsModel.setProperty(i, 'tags', updatedThread.tags.join(', '));
                                 break;
                             }
                         }
