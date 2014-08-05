@@ -1,5 +1,6 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.2
+import QtQuick.Controls.Styles 1.1
 import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.1
 import QtQuick.Window 2.0
@@ -99,13 +100,37 @@ ApplicationWindow {
         TextArea {
             id: code
 
+            font.family: "Lucida Console"
             readOnly: true
+            textFormat: TextEdit.RichText
+            style: TextAreaStyle {
+                backgroundColor: "#171315"
+            }
 
             function render(instructions) {
+                /*
+                  TODO:
+                    var registers = /[re][abcd]x|[re][sd]i]|[re][bs]p|[re]ip/;
+                    var immediates = /(0x|[0-9])[0-9a-f]*/;
+                 */
                 var lines = instructions.map(function (insn) {
-                    return insn.address + "\t" + insn.mnemonic + " " + insn.opStr;
+                    var line = "<font color=\"#3dbb9f\">" + _zeroPad(insn.address.substr(2)) + "</font>\t";
+                    line += "<font color=\"#5076ef\">" + insn.mnemonic + "</font>";
+                    if (insn.opStr) {
+                        line += " <font color=\"#dcdd9f\">" + insn.opStr + "</font>";
+                    }
+                    line += "</font>";
+                    return line;
                 });
-                text = lines.join("\n");
+                text = lines.join("<br />");
+            }
+
+            function _zeroPad(s) {
+                var result = s;
+                while (result.length < 8) {
+                    result = "0" + result;
+                }
+                return result;
             }
         }
     }
