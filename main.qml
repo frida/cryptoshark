@@ -105,7 +105,7 @@ ApplicationWindow {
             }
             font.family: "Lucida Console"
             textFormat: TextEdit.RichText
-            font.pointSize: 14
+            wrapMode: TextEdit.NoWrap
             readOnly: true
 
             function render(instructions) {
