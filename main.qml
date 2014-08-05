@@ -163,14 +163,18 @@ ApplicationWindow {
                          var summary = event.summary;
                          for (var address in summary) {
                              if (summary.hasOwnProperty(address)) {
-                                 var count = summary[address];
+                                 var entry = summary[address];
                                  var index = _functions[address];
                                  if (!index) {
                                      index = functionsModel.count;
                                      _functions[address] = index;
-                                     functionsModel.append({address: address, calls: count, threads: "" + event.thread.id});
+                                     functionsModel.append({
+                                         address: entry.symbol ? entry.symbol.module + "+0x" + entry.symbol.offset.toString(16) : address,
+                                         calls: entry.count,
+                                         threads: "" + event.thread.id
+                                     });
                                  } else {
-                                     functionsModel.setProperty(index, 'calls', functionsModel.get(index).calls + count);
+                                     functionsModel.setProperty(index, 'calls', functionsModel.get(index).calls + entry.count);
                                  }
                              }
                          }
