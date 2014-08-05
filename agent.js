@@ -1,13 +1,14 @@
 function onEvent(event) {
     if (event.name === 'thread:probe') {
-        Stalker.follow(event.threadId, {
+        var threadId = event.thread.id;
+        Stalker.follow(threadId, {
             events: {
                 call: true,
                 ret: false,
                 exec: false
             },
-            onCallSummary: function () {
-                console.log('summary!');
+            onCallSummary: function (summary) {
+                send({name: 'thread:summary', thread: {id: threadId}, summary: summary});
             }
         });
     }

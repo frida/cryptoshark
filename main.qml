@@ -35,13 +35,22 @@ ApplicationWindow {
         height: parent.height
         TableView {
             id: threads
-            height: parent.height - actions.height
+            height: parent.height - functions.height - actions.height
 
             TableViewColumn { role: "status"; title: ""; width: 20 }
             TableViewColumn { role: "id"; title: "Thread ID"; width: 63 }
             TableViewColumn { role: "tags"; title: "Tags"; width: 100 }
 
             model: threadsModel
+        }
+        TableView {
+            id: functions
+
+            TableViewColumn { role: "address"; title: "Function"; width: 63 }
+            TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
+            TableViewColumn { role: "threads"; title: "Thread IDs"; width: 63 }
+
+            model: functionsModel
         }
         Row {
             id: actions
@@ -51,7 +60,7 @@ ApplicationWindow {
                 onClicked: {
                     var index = threads.currentRow;
                     threadsModel.setProperty(index, 'status', 'P');
-                    script.post({name: 'thread:probe', threadId: threadsModel.get(index).id});
+                    script.post({name: 'thread:probe', thread: {id: threadsModel.get(index).id}});
                 }
             }
         }
@@ -108,6 +117,10 @@ ApplicationWindow {
         id: threadsModel
     }
 
+    ListModel {
+        id: functionsModel
+    }
+
     ProcessListModel {
         id: processModel
         device: Frida.localSystem
@@ -120,6 +133,7 @@ ApplicationWindow {
     Script {
         id: script
         url: Qt.resolvedUrl("./agent.js")
+        property var _functions: Object()
         onError: {
             errorDialog.text = message;
             errorDialog.open();
@@ -145,6 +159,22 @@ ApplicationWindow {
                             }
                         }
                         break;
+                     case 'thread:summary':
+                         var summary = event.summary;
+                         for (var address in summary) {
+                             if (summary.hasOwnProperty(address)) {
+                                 var count = summary[address];
+                                 var index = _functions[address];
+                                 if (!index) {
+                                     index = functionsModel.count;
+                                     _functions[address] = index;
+                                     functionsModel.append({address: address, calls: count, threads: "" + event.thread.id});
+                                 } else {
+                                     functionsModel.setProperty(index, 'calls', functionsModel.get(index).calls + count);
+                                 }
+                             }
+                         }
+                         break;
                 }
             }
         }
