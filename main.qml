@@ -100,24 +100,24 @@ ApplicationWindow {
         TextArea {
             id: code
 
-            font.family: "Lucida Console"
-            readOnly: true
-            textFormat: TextEdit.RichText
             style: TextAreaStyle {
-                backgroundColor: "#171315"
+                backgroundColor: "#060606"
             }
+            font.family: "Lucida Console"
+            textFormat: TextEdit.RichText
+            font.pointSize: 14
+            readOnly: true
 
             function render(instructions) {
-                /*
-                  TODO:
-                    var registers = /[re][abcd]x|[re][sd]i]|[re][bs]p|[re]ip/;
-                    var immediates = /(0x|[0-9])[0-9a-f]*/;
-                 */
+                var immediates = /((0x|[0-9])[0-9a-f]*)/g;
+                var registers = /([re][abcd]x|[re][sd]i]|[re][bs]p|[re]ip)/g;
                 var lines = instructions.map(function (insn) {
-                    var line = "<font color=\"#3dbb9f\">" + _zeroPad(insn.address.substr(2)) + "</font>\t";
-                    line += "<font color=\"#5076ef\">" + insn.mnemonic + "</font>";
+                    var line = "<font color=\"#ff8689\">" + _zeroPad(insn.address.substr(2)) + "</font>&nbsp;";
+                    line += "<font color=\"#6064f6\"><b>" + insn.mnemonic + "</b>";
                     if (insn.opStr) {
-                        line += " <font color=\"#dcdd9f\">" + insn.opStr + "</font>";
+                        line += " " + insn.opStr
+                            .replace(immediates, "<font color=\"#ffae6c\">$1</font>")
+                            .replace(registers, "<font color=\"#dfde92\">$1</font>");
                     }
                     line += "</font>";
                     return line;
