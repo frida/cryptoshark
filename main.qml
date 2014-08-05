@@ -109,8 +109,8 @@ ApplicationWindow {
             readOnly: true
 
             function render(instructions) {
-                var immediates = /((0x|[0-9])[0-9a-f]*)/g;
-                var registers = /([re][abcd]x|[re][sd]i]|[re][bs]p|[re]ip)/g;
+                var immediates = /((\b|-)(0x|[0-9])[0-9a-f]*)\b/g;
+                var registers = /\b([re][abcd]x|[re][sd]i|[re][bs]p|[re]ip)\b/g;
                 var lines = instructions.map(function (insn) {
                     var line = "<font color=\"#ff8689\">" + _zeroPad(insn.address.substr(2)) + "</font>&nbsp;";
                     line += "<font color=\"#6064f6\"><b>" + insn.mnemonic + "</b>";
