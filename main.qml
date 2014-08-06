@@ -1,13 +1,41 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.2
 import QtQuick.Dialogs 1.2
+import QtQuick.LocalStorage 2.0
 import QtQuick.Window 2.0
 import Frida 1.0
 
 import "components"
 import "session"
+import "models.js" as Models
 
 ApplicationWindow {
+    id: app
+
+    property var _process: null
+    property var _loadingModels: false
+
+    Component.onCompleted: {
+        processDialog.open();
+    }
+
+    function attach(process) {
+        if (_process !== null && process.pid === _process.pid) {
+            return;
+        }
+        _process = process;
+        _loadingModels = true;
+        Models.load(process, function () {
+            _loadingModels = false;
+            Frida.localSystem.inject(agent, process.pid);
+        });
+    }
+
+    function detach() {
+        agent.instances[0].stop();
+        _process = null;
+    }
+
     title: qsTr("CryptoShark")
     width: 640
     height: 480
@@ -28,7 +56,7 @@ ApplicationWindow {
                 id: detach
                 text: qsTr("Detach")
                 onTriggered: {
-                    agent.instances[0].stop();
+                    detach();
                 }
             }
             MenuItem {
@@ -36,10 +64,6 @@ ApplicationWindow {
                 onTriggered: Qt.quit()
             }
         }
-    }
-
-    Component.onCompleted: {
-        processDialog.open();
     }
 
     Loader {
@@ -57,7 +81,7 @@ ApplicationWindow {
             },
             State {
                 name: 'attaching'
-                when: agent.instances.length > 0 && agent.instances[0].status < 5
+                when: _loadingModels || (agent.instances.length > 0 && agent.instances[0].status < 5)
                 PropertyChanges { target: attach; enabled: false }
                 PropertyChanges { target: detach; enabled: false }
                 PropertyChanges { target: loader; sourceComponent: attachingComponent }
@@ -76,7 +100,7 @@ ApplicationWindow {
         id: processDialog
 
         onSelected: {
-            Frida.localSystem.inject(agent, process.pid);
+            app.attach(process);
         }
 
         model: processModel
