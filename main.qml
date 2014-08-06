@@ -69,7 +69,7 @@ ApplicationWindow {
                         onClicked: {
                             var index = threads.currentRow;
                             threadsModel.setProperty(index, 'status', 'P');
-                            script.probe(threadsModel.get(index).id);
+                            agent.probe(threadsModel.get(index).id);
                         }
                     }
                 }
@@ -89,7 +89,7 @@ ApplicationWindow {
                     onCurrentRowChanged: {
                         var func = model.get(currentRow);
                         if (func) {
-                            script.disassemble(func.address, function (instructions) {
+                            agent.disassemble(func.address, function (instructions) {
                                 disassembly.render(instructions);
                             });
                         }
@@ -107,7 +107,7 @@ ApplicationWindow {
         id: processDialog
 
         onSelected: {
-            Frida.localSystem.inject(script, process.pid);
+            Frida.localSystem.inject(agent, process.pid);
         }
 
         model: processModel
@@ -135,7 +135,7 @@ ApplicationWindow {
     }
 
     Script {
-        id: script
+        id: agent
         url: Qt.resolvedUrl("./agent.js")
 
         property var _functions: Object()
