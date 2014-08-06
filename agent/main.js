@@ -9,22 +9,14 @@ const mixIn = require('mout/object/mixIn');
 const services = {};
 const stanzaHandlers = {};
 
+ModuleMap.build().then(start);
+
 function start(moduleMap) {
     services.monitor = new ThreadMonitor();
     services.prober = new ThreadProber(moduleMap);
     services.disassembler = new Disassembler();
 
-    for (let key in services) {
-        if (services.hasOwnProperty(key)) {
-            let service = services[key];
-            let handlers = service.handlers;
-            for (let name in handlers) {
-                if (handlers.hasOwnProperty(name)) {
-                    stanzaHandlers[name] = handlers[name].bind(service);
-                }
-            }
-        }
-    }
+    mixIn(stanzaHandlers, collectHandlers(services));
 
     recv(onStanza);
 }
@@ -43,4 +35,16 @@ function onStanza(stanza) {
     recv(onStanza);
 }
 
-ModuleMap.build().then(start);
+function collectHandlers(services) {
+    for (let key in services) {
+        if (services.hasOwnProperty(key)) {
+            let service = services[key];
+            let handlers = service.handlers;
+            for (let name in handlers) {
+                if (handlers.hasOwnProperty(name)) {
+                    stanzaHandlers[name] = handlers[name].bind(service);
+                }
+            }
+        }
+    }
+}
