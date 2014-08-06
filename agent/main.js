@@ -36,15 +36,17 @@ function onStanza(stanza) {
 }
 
 function collectHandlers(services) {
+    const result = {};
     for (let key in services) {
         if (services.hasOwnProperty(key)) {
             let service = services[key];
             let handlers = service.handlers;
             for (let name in handlers) {
                 if (handlers.hasOwnProperty(name)) {
-                    stanzaHandlers[name] = handlers[name].bind(service);
+                    result[name] = handlers[name].bind(service);
                 }
             }
         }
     }
+    return result;
 }
