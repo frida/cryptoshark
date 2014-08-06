@@ -2,5 +2,7 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>agent.js</file>
+        <file>DisassemblyView.qml</file>
+        <file>ProcessDialog.qml</file>
     </qresource>
 </RCC>

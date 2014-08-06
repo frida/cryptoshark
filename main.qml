@@ -1,6 +1,5 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.2
-import QtQuick.Controls.Styles 1.1
 import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.1
 import QtQuick.Window 2.0
@@ -19,7 +18,7 @@ ApplicationWindow {
                 text: qsTr("Attach")
                 onTriggered: {
                     processModel.refresh();
-                    processSelector.visible = true;
+                    processDialog.visible = true;
                 }
             }
             MenuItem {
@@ -30,7 +29,7 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
-        processSelector.visible = true;
+        processDialog.visible = true;
     }
 
     SplitView {
@@ -74,6 +73,8 @@ ApplicationWindow {
                         }
                     }
                 }
+                ComboBox {
+                }
                 TableView {
                     id: functions
                     Layout.fillWidth: true
@@ -89,7 +90,7 @@ ApplicationWindow {
                         var func = model.get(currentRow);
                         if (func) {
                             script.disassemble(func.address, function (instructions) {
-                                code.render(instructions);
+                                disassembly.render(instructions);
                             });
                         }
                     }
@@ -97,85 +98,19 @@ ApplicationWindow {
             }
         }
 
-        TextArea {
-            id: code
-
-            style: TextAreaStyle {
-                backgroundColor: "#060606"
-            }
-            font.family: "Lucida Console"
-            textFormat: TextEdit.RichText
-            wrapMode: TextEdit.NoWrap
-            readOnly: true
-
-            function render(instructions) {
-                var immediates = /((\b|-)(0x|[0-9])[0-9a-f]*)\b/g;
-                var registers = /\b([re][abcd]x|[re][sd]i|[re][bs]p|[re]ip)\b/g;
-                var lines = instructions.map(function (insn) {
-                    var line = "<font color=\"#ff8689\">" + _zeroPad(insn.address.substr(2)) + "</font>&nbsp;";
-                    line += "<font color=\"#6064f6\"><b>" + insn.mnemonic + "</b>";
-                    if (insn.opStr) {
-                        line += " " + insn.opStr
-                            .replace(immediates, "<font color=\"#ffae6c\">$1</font>")
-                            .replace(registers, "<font color=\"#dfde92\">$1</font>");
-                    }
-                    line += "</font>";
-                    return line;
-                });
-                text = lines.join("<br />");
-            }
-
-            function _zeroPad(s) {
-                var result = s;
-                while (result.length < 8) {
-                    result = "0" + result;
-                }
-                return result;
-            }
+        DisassemblyView {
+            id: disassembly
         }
     }
 
-    Dialog {
-        id: processSelector
-        height: 270
-        title: qsTr("Choose target process:")
-        modality: Qt.WindowModal
-        standardButtons: AbstractDialog.Ok | AbstractDialog.Cancel
+    ProcessDialog {
+        id: processDialog
 
-        TableView {
-            id: processes
-            width: parent.width
-            height: 200
-
-            TableViewColumn {
-                role: "smallIcon"
-                width: 16
-                delegate: Image {
-                    source: styleData.value
-                    fillMode: Image.Pad
-                }
-            }
-            TableViewColumn { role: "pid"; title: "Pid"; width: 50 }
-            TableViewColumn { role: "name"; title: "Name"; width: 100 }
-
-            model: processModel
-
-            onActivated: {
-                processSelector.close();
-                processSelector._attachToSelected();
-            }
+        onSelected: {
+            Frida.localSystem.inject(script, process.pid);
         }
 
-        onAccepted: {
-            _attachToSelected();
-        }
-
-        function _attachToSelected() {
-            var currentRow = processes.currentRow;
-            if (currentRow !== -1) {
-                Frida.localSystem.inject(script, processModel.get(currentRow).pid);
-            }
-        }
+        model: processModel
     }
 
     MessageDialog {
