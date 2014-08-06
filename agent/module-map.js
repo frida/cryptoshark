@@ -1,11 +1,11 @@
 "use strict";
 
-var bigInt = require('big-integer');
+const bigInt = require('big-integer');
 
 module.exports = {
     build: function () {
         return new Promise(function (resolve) {
-            var modules = [];
+            const modules = [];
             Process.enumerateModules({
                 onMatch: function (mod) {
                     const base = bigInt(mod.base.toString(10));

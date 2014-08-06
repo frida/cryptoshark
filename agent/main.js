@@ -1,10 +1,10 @@
 "use strict";
 
-var Disassembler = require('./disassembler');
-var ModuleMap = require('./module-map');
-var ThreadMonitor = require('./thread-monitor');
-var ThreadProber = require('./thread-prober');
-var mixIn = require('mout/object/mixIn');
+const Disassembler = require('./disassembler');
+const ModuleMap = require('./module-map');
+const ThreadMonitor = require('./thread-monitor');
+const ThreadProber = require('./thread-prober');
+const mixIn = require('mout/object/mixIn');
 
 const services = {};
 const stanzaHandlers = {};
@@ -30,7 +30,7 @@ function start(moduleMap) {
 }
 
 function onStanza(stanza) {
-    var handler = stanzaHandlers[stanza.name];
+    const handler = stanzaHandlers[stanza.name];
     if (handler) {
         handler(stanza.payload)
         .then(function (result) {
