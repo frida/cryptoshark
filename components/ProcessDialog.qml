@@ -3,6 +3,8 @@ import QtQuick.Controls 1.2
 import QtQuick.Dialogs 1.2
 
 Dialog {
+    id: dialog
+
     property alias model: processes.model
 
     signal selected(var process)
@@ -40,8 +42,8 @@ Dialog {
         TableViewColumn { role: "name"; title: "Name"; width: 100 }
 
         onActivated: {
-            parent.close();
-            parent._emitSelected();
+            dialog.close();
+            dialog._emitSelected();
         }
     }
 }

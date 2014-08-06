@@ -2,7 +2,10 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>agent.js</file>
-        <file>DisassemblyView.qml</file>
-        <file>ProcessDialog.qml</file>
+        <file>session/Attached.qml</file>
+        <file>session/Attaching.qml</file>
+        <file>session/Detached.qml</file>
+        <file>components/DisassemblyView.qml</file>
+        <file>components/ProcessDialog.qml</file>
     </qresource>
 </RCC>

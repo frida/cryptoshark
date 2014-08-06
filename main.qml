@@ -1,9 +1,11 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.2
 import QtQuick.Dialogs 1.2
-import QtQuick.Layouts 1.1
 import QtQuick.Window 2.0
 import Frida 1.0
+
+import "components"
+import "session"
 
 ApplicationWindow {
     title: qsTr("CryptoShark")
@@ -15,10 +17,18 @@ ApplicationWindow {
         Menu {
             title: qsTr("File")
             MenuItem {
+                id: attach
                 text: qsTr("Attach")
                 onTriggered: {
                     processModel.refresh();
-                    processDialog.visible = true;
+                    processDialog.open();
+                }
+            }
+            MenuItem {
+                id: detach
+                text: qsTr("Detach")
+                onTriggered: {
+                    agent.instances[0].stop();
                 }
             }
             MenuItem {
@@ -29,78 +39,37 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
-        processDialog.visible = true;
+        processDialog.open();
     }
 
-    SplitView {
+    Loader {
+        id: loader
         anchors.fill: parent
-        orientation: Qt.Horizontal
+        sourceComponent: detachedComponent
 
-        Item {
-            width: sidebar.implicitWidth
-            Layout.minimumWidth: 5
-
-            ColumnLayout {
-                id: sidebar
-                spacing: 5
-
-                anchors {
-                    fill: parent
-                    margins: 1
-                }
-
-                TableView {
-                    id: threads
-                    Layout.fillWidth: true
-
-                    TableViewColumn { role: "status"; title: ""; width: 20 }
-                    TableViewColumn { role: "id"; title: "Thread ID"; width: 63 }
-                    TableViewColumn { role: "tags"; title: "Tags"; width: 100 }
-
-                    model: threadsModel
-                }
-                Row {
-                    id: actions
-                    Layout.fillWidth: true
-
-                    Button {
-                        text: qsTr("Probe")
-                        enabled: threadsModel.get(threads.currentRow) !== undefined && threadsModel.get(threads.currentRow).status === ''
-                        onClicked: {
-                            var index = threads.currentRow;
-                            threadsModel.setProperty(index, 'status', 'P');
-                            agent.probe(threadsModel.get(index).id);
-                        }
-                    }
-                }
-                ComboBox {
-                }
-                TableView {
-                    id: functions
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-
-                    TableViewColumn { role: "name"; title: "Function"; width: 63 }
-                    TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
-                    TableViewColumn { role: "threads"; title: "Thread IDs"; width: 70 }
-
-                    model: functionsModel
-
-                    onCurrentRowChanged: {
-                        var func = model.get(currentRow);
-                        if (func) {
-                            agent.disassemble(func.address, function (instructions) {
-                                disassembly.render(instructions);
-                            });
-                        }
-                    }
-                }
+        states: [
+            State {
+                name: 'detached'
+                when: agent.instances.length === 0 || agent.instances[0].status > 5
+                PropertyChanges { target: attach; enabled: true }
+                PropertyChanges { target: detach; enabled: false }
+                PropertyChanges { target: loader; sourceComponent: detachedComponent }
+            },
+            State {
+                name: 'attaching'
+                when: agent.instances.length > 0 && agent.instances[0].status < 5
+                PropertyChanges { target: attach; enabled: false }
+                PropertyChanges { target: detach; enabled: false }
+                PropertyChanges { target: loader; sourceComponent: attachingComponent }
+            },
+            State {
+                name: 'attached'
+                when: agent.instances.length > 0 && agent.instances[0].status === 5
+                PropertyChanges { target: attach; enabled: false }
+                PropertyChanges { target: detach; enabled: true }
+                PropertyChanges { target: loader; sourceComponent: attachedComponent }
             }
-        }
-
-        DisassemblyView {
-            id: disassembly
-        }
+        ]
     }
 
     ProcessDialog {
@@ -113,16 +82,44 @@ ApplicationWindow {
         model: processModel
     }
 
+    Component {
+        id: detachedComponent
+
+        Detached {
+            onAttach: {
+                processModel.refresh();
+                processDialog.open();
+           }
+        }
+    }
+
+    Component {
+        id: attachingComponent
+
+        Attaching {
+        }
+    }
+
+    Component {
+        id: attachedComponent
+
+        Attached {
+            threadsModel: threads
+            functionsModel: functions
+            agentService: agent
+        }
+    }
+
     MessageDialog {
         id: errorDialog
     }
 
     ListModel {
-        id: threadsModel
+        id: threads
     }
 
     ListModel {
-        id: functionsModel
+        id: functions
     }
 
     ProcessListModel {
@@ -156,19 +153,19 @@ ApplicationWindow {
             _nextRequestId++;
         }
 
-        function _onThreadsUpdate(threads) {
-            threads.forEach(function (thread) {
-                threadsModel.append({id: thread.id, tags: thread.tags.join(', '), status: ''});
+        function _onThreadsUpdate(updatedThreads) {
+            updatedThreads.forEach(function (thread) {
+                threads.append({id: thread.id, tags: thread.tags.join(', '), status: ''});
             });
         }
 
         function _onThreadUpdate(updatedThread) {
             var updatedThreadId = updatedThread.id;
-            var count = threadsModel.count;
+            var count = threads.count;
             for (var i = 0; i !== count; i++) {
-                var thread = threadsModel.get(i);
+                var thread = threads.get(i);
                 if (thread.id === updatedThreadId) {
-                    threadsModel.setProperty(i, 'tags', updatedThread.tags.join(', '));
+                    threads.setProperty(i, 'tags', updatedThread.tags.join(', '));
                     break;
                 }
             }
@@ -180,9 +177,9 @@ ApplicationWindow {
                     var entry = summary[address];
                     var index = _functions[address];
                     if (!index) {
-                        index = functionsModel.count;
+                        index = functions.count;
                         _functions[address] = index;
-                        functionsModel.append({
+                        functions.append({
                             name: entry.symbol ? entry.symbol.module + "+0x" + entry.symbol.offset.toString(16) : address,
                             address: address,
                             calls: entry.count,
@@ -190,7 +187,7 @@ ApplicationWindow {
                             symbol: entry.symbol
                         });
                     } else {
-                        functionsModel.setProperty(index, 'calls', functionsModel.get(index).calls + entry.count);
+                        functions.setProperty(index, 'calls', functions.get(index).calls + entry.count);
                     }
                 }
             }
