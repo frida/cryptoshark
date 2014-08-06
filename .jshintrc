@@ -1,0 +1,16 @@
+{
+    "esnext": true,
+    "node": true,
+    "globals": {
+        "Instruction": false,
+        "Interceptor": false,
+        "Module": false,
+        "Possible": false,
+        "Process": false,
+        "Socket": false,
+        "Stalker": false,
+        "ptr": false,
+        "recv": false,
+        "send": false
+    }
+}

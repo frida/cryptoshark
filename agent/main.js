@@ -1,0 +1,46 @@
+"use strict";
+
+var Disassembler = require('./disassembler');
+var ModuleMap = require('./module-map');
+var ThreadMonitor = require('./thread-monitor');
+var ThreadProber = require('./thread-prober');
+var mixIn = require('mout/object/mixIn');
+
+const services = {};
+const stanzaHandlers = {};
+
+function start(moduleMap) {
+    services.monitor = new ThreadMonitor();
+    services.prober = new ThreadProber(moduleMap);
+    services.disassembler = new Disassembler();
+
+    for (let key in services) {
+        if (services.hasOwnProperty(key)) {
+            let service = services[key];
+            let handlers = service.handlers;
+            for (let name in handlers) {
+                if (handlers.hasOwnProperty(name)) {
+                    stanzaHandlers[name] = handlers[name].bind(service);
+                }
+            }
+        }
+    }
+
+    recv(onStanza);
+}
+
+function onStanza(stanza) {
+    var handler = stanzaHandlers[stanza.name];
+    if (handler) {
+        handler(stanza.payload)
+        .then(function (result) {
+            send({id: stanza.id, payload: result});
+        });
+    } else {
+        throw new Error("Unknown stanza: " + stanza.name);
+    }
+
+    recv(onStanza);
+}
+
+ModuleMap.build().then(start);

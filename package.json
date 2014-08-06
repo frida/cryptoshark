@@ -1,0 +1,38 @@
+{
+  "name": "cryptoshark-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CryptoShark's agent injected into target processes",
+  "homepage": "https://github.com/frida/cryptoshark",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/frida/cryptoshark.git"
+  },
+  "keywords": [
+    "frida"
+  ],
+  "bugs": {
+    "url": "https://github.com/frida/cryptoshark/issues"
+  },
+  "author": {
+    "name": "Ole André Vadla Ravnås",
+    "email": "ole.andre.ravnas@tillitech.com",
+    "web": "http://www.frida.re"
+  },
+  "license": "wxWindows Library Licence, Version 3.1",
+  "readmeFilename": "README.md",
+  "devDependencies": {
+    "big-integer": "^1.2.10",
+    "gulp": "^3.8.7",
+    "gulp-browserify": "^0.5.0",
+    "gulp-jshint": "^1.8.4",
+    "gulp-load-plugins": "^0.5.3",
+    "gulp-rename": "^1.2.0",
+    "gulp-util": "^3.0.0",
+    "jshint-stylish": "^0.4.0",
+    "mout": "^0.9.1"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  }
+}
