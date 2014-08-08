@@ -12,6 +12,8 @@ const stanzaHandlers = {};
 ModuleMap.build().then(start);
 
 function start(moduleMap) {
+    send({name: 'modules:update', payload: moduleMap.modules});
+
     services.monitor = new ThreadMonitor();
     services.prober = new ThreadProber(moduleMap);
     services.disassembler = new Disassembler();

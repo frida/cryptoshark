@@ -12,10 +12,15 @@ import "models.js" as Models
 ApplicationWindow {
     id: app
 
+    property var _modulesModel: null
+    property var _functionsModel: null
+
     property var _process: null
     property var _loadingModels: false
 
     Component.onCompleted: {
+        Models.modules.listen(_onModulesChange);
+        Models.functions.listen(_onFunctionsChange);
         processDialog.open();
     }
 
@@ -25,7 +30,7 @@ ApplicationWindow {
         }
         _process = process;
         _loadingModels = true;
-        Models.load(process, function () {
+        Models.open(process, function () {
             _loadingModels = false;
             Frida.localSystem.inject(agent, process.pid);
         });
@@ -34,6 +39,17 @@ ApplicationWindow {
     function detach() {
         agent.instances[0].stop();
         _process = null;
+        Models.close();
+    }
+
+    function _onModulesChange() {
+        _modulesModel = null;
+        _modulesModel = Models.modules;
+    }
+
+    function _onFunctionsChange() {
+        _functionsModel = null;
+        _functionsModel = Models.functions;
     }
 
     title: qsTr("CryptoShark")
@@ -128,9 +144,10 @@ ApplicationWindow {
         id: attachedComponent
 
         Attached {
-            threadsModel: threads
-            functionsModel: functions
             agentService: agent
+            threadsModel: _threadsModel
+            modulesModel: _modulesModel
+            functionsModel: _functionsModel
         }
     }
 
@@ -139,11 +156,7 @@ ApplicationWindow {
     }
 
     ListModel {
-        id: threads
-    }
-
-    ListModel {
-        id: functions
+        id: _threadsModel
     }
 
     ProcessListModel {
@@ -159,7 +172,6 @@ ApplicationWindow {
         id: agent
         url: Qt.resolvedUrl("./agent.js")
 
-        property var _functions: Object()
         property var _requests: Object()
         property var _nextRequestId: 1
 
@@ -178,41 +190,20 @@ ApplicationWindow {
         }
 
         function _onThreadsUpdate(updatedThreads) {
+            _threadsModel.clear();
             updatedThreads.forEach(function (thread) {
-                threads.append({id: thread.id, tags: thread.tags.join(', '), status: ''});
+                _threadsModel.append({id: thread.id, tags: thread.tags.join(', '), status: ''});
             });
         }
 
         function _onThreadUpdate(updatedThread) {
             var updatedThreadId = updatedThread.id;
-            var count = threads.count;
+            var count = _threadsModel.count;
             for (var i = 0; i !== count; i++) {
-                var thread = threads.get(i);
+                var thread = _threadsModel.get(i);
                 if (thread.id === updatedThreadId) {
-                    threads.setProperty(i, 'tags', updatedThread.tags.join(', '));
+                    _threadsModel.setProperty(i, 'tags', updatedThread.tags.join(', '));
                     break;
-                }
-            }
-        }
-
-        function _onThreadSummary(thread, summary) {
-            for (var address in summary) {
-                if (summary.hasOwnProperty(address)) {
-                    var entry = summary[address];
-                    var index = _functions[address];
-                    if (!index) {
-                        index = functions.count;
-                        _functions[address] = index;
-                        functions.append({
-                            name: entry.symbol ? entry.symbol.module + "+0x" + entry.symbol.offset.toString(16) : address,
-                            address: address,
-                            calls: entry.count,
-                            threads: "" + thread.id,
-                            symbol: entry.symbol
-                        });
-                    } else {
-                        functions.setProperty(index, 'calls', functions.get(index).calls + entry.count);
-                    }
                 }
             }
         }
@@ -234,6 +225,9 @@ ApplicationWindow {
                 var stanza = object.payload;
                 var payload = stanza.payload;
                 switch (stanza.name) {
+                    case 'modules:update':
+                        Models.modules.update(payload);
+                        break;
                     case 'threads:update':
                         _onThreadsUpdate(payload);
                         break;
@@ -241,7 +235,7 @@ ApplicationWindow {
                         _onThreadUpdate(payload);
                         break;
                      case 'thread:summary':
-                         _onThreadSummary(payload.thread, payload.summary);
+                         Models.functions.update(payload);
                          break;
                      default:
                          console.log('Unhandled: ' + JSON.stringify(stanza));
