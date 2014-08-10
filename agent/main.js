@@ -3,7 +3,7 @@
 const Disassembler = require('./disassembler');
 const ModuleMap = require('./module-map');
 const ThreadMonitor = require('./thread-monitor');
-const ThreadProber = require('./thread-prober');
+const ThreadTracer = require('./thread-tracer');
 const mixIn = require('mout/object/mixIn');
 
 const services = {};
@@ -15,7 +15,7 @@ function start(moduleMap) {
     send({name: 'modules:update', payload: moduleMap.modules});
 
     services.monitor = new ThreadMonitor();
-    services.prober = new ThreadProber(moduleMap);
+    services.tracer = new ThreadTracer(moduleMap);
     services.disassembler = new Disassembler();
 
     mixIn(stanzaHandlers, collectHandlers(services));

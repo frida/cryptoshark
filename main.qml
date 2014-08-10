@@ -12,15 +12,10 @@ import "models.js" as Models
 ApplicationWindow {
     id: app
 
-    property var _modulesModel: null
-    property var _functionsModel: null
-
     property var _process: null
-    property var _loadingModels: false
+    property var _models: null
 
     Component.onCompleted: {
-        Models.modules.listen(_onModulesChange);
-        Models.functions.listen(_onFunctionsChange);
         processDialog.open();
     }
 
@@ -29,9 +24,8 @@ ApplicationWindow {
             return;
         }
         _process = process;
-        _loadingModels = true;
         Models.open(process, function () {
-            _loadingModels = false;
+            _models = Models;
             Frida.localSystem.inject(agent, process.pid);
         });
     }
@@ -39,17 +33,8 @@ ApplicationWindow {
     function detach() {
         agent.instances[0].stop();
         _process = null;
-        Models.close();
-    }
-
-    function _onModulesChange() {
-        _modulesModel = null;
-        _modulesModel = Models.modules;
-    }
-
-    function _onFunctionsChange() {
-        _functionsModel = null;
-        _functionsModel = Models.functions;
+        _models.close();
+        _models = null;
     }
 
     title: qsTr("CryptoShark")
@@ -97,7 +82,7 @@ ApplicationWindow {
             },
             State {
                 name: 'attaching'
-                when: _loadingModels || (agent.instances.length > 0 && agent.instances[0].status < 5)
+                when: !_models || (agent.instances.length > 0 && agent.instances[0].status < 5)
                 PropertyChanges { target: attach; enabled: false }
                 PropertyChanges { target: detach; enabled: false }
                 PropertyChanges { target: loader; sourceComponent: attachingComponent }
@@ -146,13 +131,22 @@ ApplicationWindow {
         Attached {
             agentService: agent
             threadsModel: _threadsModel
-            modulesModel: _modulesModel
-            functionsModel: _functionsModel
+            models: _models
         }
     }
 
     MessageDialog {
         id: errorDialog
+    }
+
+    Timer {
+        Component.onCompleted: {
+            Models.scheduler.configure(this);
+        }
+
+        onTriggered: {
+            Models.scheduler.tick();
+        }
     }
 
     ListModel {
@@ -175,8 +169,12 @@ ApplicationWindow {
         property var _requests: Object()
         property var _nextRequestId: 1
 
-        function probe(threadId, callback) {
-            _request('thread:probe', {id: threadId}, callback);
+        function follow(threadId, callback) {
+            _request('thread:follow', {id: threadId}, callback);
+        }
+
+        function unfollow(threadId, callback) {
+            _request('thread:unfollow', {id: threadId}, callback);
         }
 
         function disassemble(address, callback) {

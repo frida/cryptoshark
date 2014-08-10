@@ -8,21 +8,19 @@ import "../vendor.js" as Vendor
 SplitView {
     property var agentService: null
     property alias threadsModel: threadsView.model
-    property var modulesModel: null
-    property var functionsModel: null
+    property var models: null
 
-    property var modules: []
-    property alias functions: _functions
     property var currentModule: null
     property var currentFunction: null
-    property bool _refreshingModels: false
 
-    onModulesModelChanged: {
-        modelRefreshTimer.schedule('modules');
+    property var _functionsObservable: null
+
+    Component.onDestruction: {
+        _updateFunctionsObservable(null);
     }
 
-    onFunctionsModelChanged: {
-        modelRefreshTimer.schedule('functions');
+    onCurrentModuleChanged: {
+        _updateFunctionsObservable(currentModule ? models.functions.allInModule(currentModule) : null);
     }
 
     onCurrentFunctionChanged: {
@@ -32,6 +30,27 @@ SplitView {
             agentService.disassemble(address, function (instructions) {
                 disassembly.render(instructions);
             });
+        }
+    }
+
+    function _updateFunctionsObservable(observable) {
+        if (_functionsObservable) {
+            _functionsObservable.removeObserver(functions);
+            _functionsObservable = null;
+        }
+        _functionsObservable = observable;
+        if (_functionsObservable) {
+            _functionsObservable.addObserver(functions);
+            if (functions.count > 0) {
+                functionsView.currentRow = 0;
+                functionsView.selection.clear();
+                functionsView.selection.select(0);
+                currentFunction = functions.get(0);
+            } else {
+                functionsView.currentRow = -1;
+                functionsView.selection.clear();
+                currentFunction = null;
+            }
         }
     }
 
@@ -46,153 +65,29 @@ SplitView {
     orientation: Qt.Horizontal
 
     ListModel {
-        id: _functions
-    }
+        id: functions
 
-    Timer {
-        id: modelRefreshTimer
-
-        property var _changes: Object()
-        property bool _pendingFlush: false
-        property var _lastRefresh: null
-
-        function schedule() {
-            Array.prototype.forEach.call(arguments, function (model) {
-                _changes[model] = true;
-            });
-            var now = new Date();
-            var elapsed = _lastRefresh ? now - _lastRefresh : 500;
-            var staleData = elapsed >= 500;
-            if (staleData) {
-                if (!_pendingFlush) {
-                    _pendingFlush = true;
-                    stop();
-                    interval = 10;
-                    start();
-                }
+        function onFunctionsUpdate(items, partialUpdate) {
+            if (partialUpdate) {
+                var index = partialUpdate[0];
+                var property = partialUpdate[1];
+                var value = partialUpdate[2];
+                setProperty(index, property, value);
             } else {
-                var nextRefreshDelay = Math.max(500 - elapsed, 10);
-                stop();
-                interval = nextRefreshDelay;
-                start();
+                clear();
+                for (var i = 0; i !== items.length; i++) {
+                    append(items[i]);
+                }
             }
         }
 
-        onTriggered: {
-            refreshNow();
+        function onFunctionsAdd(index, func) {
+            insert(index, func);
         }
 
-        function refreshNow() {
-            stop();
-            _pendingFlush = false;
-            _lastRefresh = new Date();
-
-            var selectedModuleId = currentModule ? currentModule.id : null;
-            var selectedFunctionId = currentFunction ? currentFunction.id : null;
-
-            var changes = {};
-            for (var model in _changes) {
-                if (_changes.hasOwnProperty(model)) {
-                    changes[model] = _changes[model];
-                }
-            }
-            var pending = Object.keys(_changes).length;
-            var results = {};
-
-            function complete(model, items) {
-                delete changes[model];
-                results[model] = items;
-                if (--pending === 0) {
-                    var i;
-
-                    _refreshingModels = true;
-
-                    var moduleItems = results['modules'];
-                    if (moduleItems) {
-                        modules = moduleItems;
-
-                        if (selectedModuleId) {
-                            var selectedModuleValid = false;
-                            for (i = 0; i !== moduleItems.length; i++) {
-                                var moduleItem = moduleItems[i];
-                                if (moduleItem.id === selectedModuleId) {
-                                    currentModule = moduleItem;
-                                    modulesView.currentIndex = i;
-                                    selectedModuleValid = true;
-                                    break;
-                                }
-                            }
-                            if (!selectedModuleValid) {
-                                currentModule = moduleItems[0] || null;
-                            }
-                        }
-                    }
-
-                    var functionItems = results['functions'];
-                    if (functionItems) {
-                        _functions.clear();
-                        functionItems.forEach(function (func) {
-                            _functions.append(func);
-                        });
-
-                        if (selectedFunctionId) {
-                            var selectedFunctionValid = false;
-                            for (i = 0; i !== functionItems.length; i++) {
-                                var functionItem = functionItems[i];
-                                if (functionItem.id === selectedFunctionId) {
-                                    currentFunction = functionItem;
-                                    functionsView.currentRow = i;
-                                    selectedFunctionValid = true;
-                                    break;
-                                }
-                            }
-                            if (!selectedFunctionValid) {
-                                currentFunction = functionItems[0] || null;
-                            }
-                        }
-                    }
-
-                    _refreshingModels = false;
-                } else {
-                    processNext();
-                }
-            }
-
-            function processNext() {
-                if (changes['modules']) {
-                    if (modulesModel) {
-                        modulesModel.allWithCalls(function (items) {
-                            if (!selectedModuleId) {
-                                selectedModuleId = items.length > 0 ? items[0].id : null;
-                            }
-                            complete('modules', items);
-                        });
-                    } else {
-                        complete('modules', []);
-                    }
-                    return;
-                }
-
-                if (changes['functions']) {
-                    if (functionsModel && selectedModuleId) {
-                        functionsModel.findByModule(selectedModuleId, function (items) {
-                            if (!selectedFunctionId) {
-                                selectedFunctionId = items.length > 0 ? items[0].id : null;
-                            }
-                            complete('functions', items);
-                        });
-                    } else {
-                        complete('functions', []);
-                    }
-                    return;
-                }
-            }
-            processNext();
-
-            _changes = {};
+        function onFunctionsMove(oldIndex, newIndex) {
+            move(oldIndex, newIndex, 1);
         }
-
-        interval: 5000
     }
 
     Item {
@@ -221,41 +116,82 @@ SplitView {
                 Layout.fillWidth: true
 
                 Button {
-                    text: qsTr("Probe")
-                    enabled: !!threadsModel && threadsModel.get(threadsView.currentRow) !== undefined && threadsModel.get(threadsView.currentRow).status === ''
+                    property string _action: !!threadsModel && threadsModel.get(threadsView.currentRow) && threadsModel.get(threadsView.currentRow).status === 'F' ? 'unfollow' : 'follow'
+                    text: _action === 'follow' ? qsTr("Follow") : qsTr("Unfollow")
+                    enabled: !!threadsModel && threadsModel.get(threadsView.currentRow) !== undefined
                     onClicked: {
                         var index = threadsView.currentRow;
-                        threadsModel.setProperty(index, 'status', 'P');
-                        agentService.probe(threadsModel.get(index).id);
+                        if (_action === 'follow') {
+                            threadsModel.setProperty(index, 'status', 'F');
+                            agentService.follow(threadsModel.get(index).id);
+                        } else {
+                            threadsModel.setProperty(index, 'status', '');
+                            agentService.unfollow(threadsModel.get(index).id);
+                        }
                     }
                 }
             }
             ComboBox {
                 id: modulesView
 
+                property var observable: null
+                property bool _updating: false
+
+                Component.onCompleted: {
+                    observable = models.modules.allWithCalls();
+                    observable.addObserver(this);
+                }
+
+                Component.onDestruction: {
+                    observable.removeObserver(this);
+                }
+
+                function onModulesUpdate(items) {
+                    var selectedModuleId = currentModule ? currentModule.id : null;
+                    _updating = true;
+                    model = items;
+                    var selectedModuleValid = false;
+                    if (selectedModuleId) {
+                        for (var i = 0; i !== items.length; i++) {
+                            var module = items[i];
+                            if (module.id === selectedModuleId) {
+                                if (!currentModule || currentModule.id !== selectedModuleId) {
+                                    currentModule = module;
+                                }
+                                currentIndex = i;
+                                selectedModuleValid = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!selectedModuleValid) {
+                        var firstModule = model[0] || null;
+                        if (currentModule !== firstModule) {
+                            currentModule = firstModule;
+                        }
+                        currentIndex = currentModule ? 0 : -1;
+                    }
+                    _updating = false;
+                }
+
                 onCurrentIndexChanged: {
-                    if (_refreshingModels) {
+                    if (_updating) {
                         return;
                     }
 
-                    currentModule = model[currentIndex] || null;
-                    modelRefreshTimer.schedule('functions');
-                    if (pressed) {
-                        modelRefreshTimer.refreshNow();
+                    var current = model[currentIndex] || null;
+                    if (currentModule !== current) {
+                        currentModule = current;
                     }
                 }
 
-                model: modules
+                model: []
                 textRole: 'name'
             }
             TableView {
                 id: functionsView
 
                 onCurrentRowChanged: {
-                    if (_refreshingModels) {
-                        return;
-                    }
-
                     currentFunction = model.get(currentRow) || null;
                 }
 
@@ -263,9 +199,8 @@ SplitView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                TableViewColumn { role: "name"; title: "Function"; width: 63 }
+                TableViewColumn { role: "name"; title: "Function"; width: 83 }
                 TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
-                TableViewColumn { role: "threads"; title: "Thread IDs"; width: 70 }
             }
         }
     }

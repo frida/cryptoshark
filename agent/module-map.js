@@ -7,9 +7,11 @@ module.exports = {
     build: function () {
         return new Promise(function (resolve) {
             const modules = [];
+            let index = 0;
             Process.enumerateModules({
                 onMatch: function (mod) {
-                    modules.push(mod);
+                    modules.push(mixIn({main: index === 0}, mod));
+                    index++;
                 },
                 onComplete: function () {
                     resolve(new ModuleMap(modules));

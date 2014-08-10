@@ -1,16 +1,17 @@
 "use strict";
 
-module.exports = ThreadProber;
+module.exports = ThreadTracer;
 
-function ThreadProber(moduleMap) {
+function ThreadTracer(moduleMap) {
     this.handlers = {
-        'thread:probe': this.probe
+        'thread:follow': this.follow,
+        'thread:unfollow': this.unfollow
     };
     this._moduleMap = moduleMap;
     Object.freeze(this);
 }
 
-ThreadProber.prototype.probe = function (thread) {
+ThreadTracer.prototype.follow = function (thread) {
     return new Promise(function (resolve) {
         let threadId = thread.id;
         Stalker.follow(threadId, {
@@ -42,4 +43,11 @@ ThreadProber.prototype.probe = function (thread) {
         });
         resolve({});
     }.bind(this));
+};
+
+ThreadTracer.prototype.unfollow = function (thread) {
+    return new Promise(function (resolve) {
+        Stalker.unfollow(thread.id);
+        resolve({});
+    });
 };
