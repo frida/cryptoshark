@@ -24,6 +24,10 @@ module.exports = {
 function ModuleMap(modules) {
     modules = resolveCollisions(modules);
     this.modules = modules;
+    this._bases = modules.reduce(function (bases, mod) {
+        bases[mod.name] = mod.base;
+        return bases;
+    }, {});
     this._items = modules.map(function (mod) {
         const base = bigInt(mod.base.toString(10));
         return [base, base.add(mod.size), mod.name];
@@ -31,7 +35,11 @@ function ModuleMap(modules) {
     this._cache = {};
 }
 
-ModuleMap.prototype.resolve = function (address) {
+ModuleMap.prototype.base = function (name) {
+    return this._bases[name] || null;
+};
+
+ModuleMap.prototype.symbol = function (address) {
     const cachedResult = this._cache[address];
     if (cachedResult) {
         return cachedResult;

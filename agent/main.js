@@ -2,6 +2,7 @@
 
 const Disassembler = require('./disassembler');
 const ModuleMap = require('./module-map');
+const ModuleMonitor = require('./module-monitor');
 const ThreadMonitor = require('./thread-monitor');
 const ThreadTracer = require('./thread-tracer');
 const mixIn = require('mout/object/mixIn');
@@ -14,7 +15,8 @@ ModuleMap.build().then(start);
 function start(moduleMap) {
     send({name: 'modules:update', payload: moduleMap.modules});
 
-    services.monitor = new ThreadMonitor();
+    services.moduleMonitor = new ModuleMonitor(moduleMap);
+    services.threadMonitor = new ThreadMonitor();
     services.tracer = new ThreadTracer(moduleMap);
     services.disassembler = new Disassembler();
 
@@ -29,6 +31,8 @@ function onStanza(stanza) {
         handler(stanza.payload)
         .then(function (result) {
             send({id: stanza.id, payload: result});
+        }, function (error) {
+            throw new Error("Error processing " + stanza.name + ": " + error);
         });
     } else {
         throw new Error("Unknown stanza: " + stanza.name);

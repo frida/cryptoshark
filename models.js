@@ -13,16 +13,18 @@ function open(process, callback) {
             "main INTEGER NOT NULL, " +
             "calls INTEGER NOT NULL DEFAULT 0" +
         ")");
-        tx.executeSql("CREATE INDEX IF NOT EXISTS modules_index ON modules(name, path);");
+        tx.executeSql("CREATE INDEX IF NOT EXISTS modules_index ON modules(name, path, calls);");
 
         tx.executeSql("CREATE TABLE IF NOT EXISTS functions (" +
             "id INTEGER PRIMARY KEY, " +
             "name TEXT NOT NULL UNIQUE, " +
             "module INTEGER, " +
             "offset INTEGER NOT NULL, " +
+            "exported INTEGER NOT NULL DEFAULT 0, " +
             "calls INTEGER NOT NULL DEFAULT 0, " +
             "FOREIGN KEY(module) REFERENCES modules(id)" +
         ")");
+        tx.executeSql("CREATE INDEX IF NOT EXISTS functions_index ON functions(module, calls, exported);");
 
         modules.database = database;
         functions.database = database;
@@ -38,6 +40,7 @@ function close() {
 
 function Modules() {
     var database = null;
+    var metadataProvider = null;
     var cache = {};
 
     function AllWithCalls() {
@@ -104,6 +107,15 @@ function Modules() {
         }
     });
 
+    Object.defineProperty(this, 'metadataProvider', {
+        get: function () {
+            return metadataProvider;
+        },
+        set: function (value) {
+            metadataProvider = value;
+        }
+    });
+
     this.update = function (update) {
         database.transaction(function (tx) {
             update.forEach(function (mod) {
@@ -149,11 +161,13 @@ function Modules() {
 function Functions(modules, scheduler) {
     var database = null;
     var collections = {};
+    var functionByName = {};
 
     function Collection(module) {
         var items = [];
         var functionByOffset = {};
         var dirty = {};
+        var exportsScanned = false;
         var observers = [];
 
         var observable = {
@@ -174,6 +188,9 @@ function Functions(modules, scheduler) {
             database.transaction(function (tx) {
                 var rows = tx.executeSql("SELECT * FROM functions WHERE module = ? ORDER BY calls DESC", [module.id]).rows;
                 items = Array.prototype.slice.call(rows);
+                items.forEach(function (func) {
+                    functionByName[func.name] = func;
+                });
                 functionByOffset = items.reduce(function (functions, func) {
                     functions[func.offset] = func;
                     return functions;
@@ -203,11 +220,13 @@ function Functions(modules, scheduler) {
                         name: functionName(module, offset),
                         module: module.id,
                         offset: offset,
+                        exported: false,
                         calls: calls
                     };
                     var index = sortedIndexOf(func);
                     items.splice(index, 0, func);
                     notifyObservers('onFunctionsAdd', index, func);
+                    functionByName[func.name] = func;
                     functionByOffset[offset] = func;
                 }
 
@@ -244,6 +263,11 @@ function Functions(modules, scheduler) {
         }
 
         function flush(quotaExceeded) {
+            if (!exportsScanned) {
+                exportsScanned = true;
+                scanExports();
+            }
+
             var finished = true;
             do {
                 database.transaction(function (tx) {
@@ -252,9 +276,9 @@ function Functions(modules, scheduler) {
                         if (dirty.hasOwnProperty(name)) {
                             var func = dirty[name];
                             if (func.id) {
-                                tx.executeSql("UPDATE functions SET calls = ? WHERE id = ?", [func.calls, func.id]);
+                                tx.executeSql("UPDATE functions SET name = ?, exported = ?, calls = ? WHERE id = ?", [func.name, func.exported, func.calls, func.id]);
                             } else {
-                                var result = tx.executeSql("INSERT INTO functions (name, module, offset, calls) VALUES (?, ?, ?, ?)", [name, module.id, func.offset, func.calls]);
+                                var result = tx.executeSql("INSERT INTO functions (name, module, offset, exported, calls) VALUES (?, ?, ?, ?, ?)", [name, module.id, func.offset, func.exported, func.calls]);
                                 func.id = result.insertId;
                             }
                             finishedNames.push(name);
@@ -270,7 +294,53 @@ function Functions(modules, scheduler) {
                 });
             }
             while (!finished && !quotaExceeded());
+
             return finished;
+        }
+
+        function scanExports() {
+            database.transaction(function (tx) {
+                if (tx.executeSql("SELECT 1 FROM functions WHERE module = ? AND exported = 1", [module.id]).rows.length === 0) {
+                    modules.metadataProvider.getModuleFunctions(module.name, function (moduleFuncs) {
+                        moduleFuncs.forEach(function (moduleFunc) {
+                            var name = moduleFunc[0];
+                            if (functionByName[name]) {
+                                name = functionPrefix(module) + "_" + name;
+                            }
+                            var offset = moduleFunc[1];
+
+                            var func = functionByOffset[offset];
+                            var index;
+                            if (func) {
+                                delete functionByName[func.name];
+                                functionByName[name] = func;
+                                delete dirty[func.name];
+                                func.name = name;
+                                func.exported = true;
+                                index = items.indexOf(func);
+                                notifyObservers('onFunctionsUpdate', items, [index, 'name', name]);
+                                notifyObservers('onFunctionsUpdate', items, [index, 'exported', true]);
+                            } else {
+                                func = {
+                                    name: name,
+                                    module: module.id,
+                                    offset: offset,
+                                    exported: true,
+                                    calls: 0
+                                };
+                                index = sortedIndexOf(func);
+                                items.splice(index, 0, func);
+                                notifyObservers('onFunctionsAdd', index, func);
+                                functionByName[name] = func;
+                                functionByOffset[offset] = func;
+                            }
+
+                            dirty[name] = func;
+                        });
+                        scheduler.schedule(flush);
+                    });
+                }
+            });
         }
 
         function sortedIndexOf(func) {

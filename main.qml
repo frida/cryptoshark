@@ -181,6 +181,10 @@ ApplicationWindow {
             _request('function:disassemble', {address: address}, callback);
         }
 
+        function getModuleFunctions(moduleName, callback) {
+            _request('module:get-functions', {name: moduleName}, callback);
+        }
+
         function _request(name, payload, callback) {
             _requests[_nextRequestId] = callback || function () {};
             post({id: _nextRequestId, name: name, payload: payload});
@@ -224,6 +228,7 @@ ApplicationWindow {
                 var payload = stanza.payload;
                 switch (stanza.name) {
                     case 'modules:update':
+                        Models.modules.metadataProvider = this;
                         Models.modules.update(payload);
                         break;
                     case 'threads:update':

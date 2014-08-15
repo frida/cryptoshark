@@ -25,7 +25,7 @@ ThreadTracer.prototype.follow = function (thread) {
                 for (let address in summary) {
                     if (summary.hasOwnProperty(address)) {
                         enrichedSummary[address] = {
-                            symbol: this._moduleMap.resolve(address),
+                            symbol: this._moduleMap.symbol(address),
                             count: summary[address]
                         };
                     }
