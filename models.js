@@ -187,11 +187,14 @@ function Functions(modules, scheduler) {
         this.load = function (database) {
             database.transaction(function (tx) {
                 var rows = tx.executeSql("SELECT * FROM functions WHERE module = ? ORDER BY calls DESC", [module.id]).rows;
-                items = Array.prototype.slice.call(rows);
-                items.forEach(function (func) {
+                var allItems = Array.prototype.slice.call(rows);
+                items = allItems.filter(function (item) {
+                    return item.calls > 0;
+                });
+                allItems.forEach(function (func) {
                     functionByName[func.name] = func;
                 });
-                functionByOffset = items.reduce(function (functions, func) {
+                functionByOffset = allItems.reduce(function (functions, func) {
                     functions[func.offset] = func;
                     return functions;
                 }, {});
@@ -201,6 +204,9 @@ function Functions(modules, scheduler) {
 
         this.unload = function () {
             items = [];
+            functionByOffset = {};
+            dirty = {};
+            exportsScanned = false;
             notifyObservers('onFunctionsUpdate', items);
         };
 
@@ -214,7 +220,6 @@ function Functions(modules, scheduler) {
                 var func = functionByOffset[offset];
                 if (func) {
                     func.calls += calls;
-                    updated.push(func);
                 } else {
                     func = {
                         name: functionName(module, offset),
@@ -223,27 +228,31 @@ function Functions(modules, scheduler) {
                         exported: false,
                         calls: calls
                     };
-                    var index = sortedIndexOf(func);
-                    items.splice(index, 0, func);
-                    notifyObservers('onFunctionsAdd', index, func);
                     functionByName[func.name] = func;
                     functionByOffset[offset] = func;
                 }
+                updated.push(func);
 
                 dirty[func.name] = func;
             });
 
             updated.forEach(function (func) {
                 var oldIndex = items.indexOf(func);
-                items.splice(oldIndex, 1);
-                var newIndex = sortedIndexOf(func);
-                if (newIndex !== oldIndex) {
-                    items.splice(newIndex, 0, func);
-                    notifyObservers('onFunctionsMove', oldIndex, newIndex);
-                    notifyObservers('onFunctionsUpdate', items, [newIndex, 'calls', func.calls]);
+                if (oldIndex === -1) {
+                    var index = sortedIndexOf(func);
+                    items.splice(index, 0, func);
+                    notifyObservers('onFunctionsAdd', index, func);
                 } else {
-                    items.splice(oldIndex, 0, func);
-                    notifyObservers('onFunctionsUpdate', items, [oldIndex, 'calls', func.calls]);
+                    items.splice(oldIndex, 1);
+                    var newIndex = sortedIndexOf(func);
+                    if (newIndex !== oldIndex) {
+                        items.splice(newIndex, 0, func);
+                        notifyObservers('onFunctionsMove', oldIndex, newIndex);
+                        notifyObservers('onFunctionsUpdate', items, [newIndex, 'calls', func.calls]);
+                    } else {
+                        items.splice(oldIndex, 0, func);
+                        notifyObservers('onFunctionsUpdate', items, [oldIndex, 'calls', func.calls]);
+                    }
                 }
             });
 
@@ -310,16 +319,12 @@ function Functions(modules, scheduler) {
                             var offset = moduleFunc[1];
 
                             var func = functionByOffset[offset];
-                            var index;
                             if (func) {
                                 delete functionByName[func.name];
                                 functionByName[name] = func;
                                 delete dirty[func.name];
                                 func.name = name;
                                 func.exported = true;
-                                index = items.indexOf(func);
-                                notifyObservers('onFunctionsUpdate', items, [index, 'name', name]);
-                                notifyObservers('onFunctionsUpdate', items, [index, 'exported', true]);
                             } else {
                                 func = {
                                     name: name,
@@ -328,11 +333,14 @@ function Functions(modules, scheduler) {
                                     exported: true,
                                     calls: 0
                                 };
-                                index = sortedIndexOf(func);
-                                items.splice(index, 0, func);
-                                notifyObservers('onFunctionsAdd', index, func);
                                 functionByName[name] = func;
                                 functionByOffset[offset] = func;
+                            }
+
+                            if (func.calls > 0) {
+                                var index = items.indexOf(func);
+                                notifyObservers('onFunctionsUpdate', items, [index, 'name', name]);
+                                notifyObservers('onFunctionsUpdate', items, [index, 'exported', true]);
                             }
 
                             dirty[name] = func;
