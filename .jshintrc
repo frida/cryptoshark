@@ -1,6 +1,7 @@
 {
     "esnext": true,
     "node": true,
+    "evil": true,
     "globals": {
         "Instruction": false,
         "Interceptor": false,

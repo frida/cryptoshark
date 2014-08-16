@@ -1,9 +1,12 @@
+.import QtQuick.LocalStorage 2.0 as QLS
+.import "vendor.js" as Vendor
+
 var scheduler = new IOScheduler();
 var modules = new Modules();
 var functions = new Functions(modules, scheduler);
 
 function open(process, callback) {
-    var database = LocalStorage.openDatabaseSync(process.name, "1.0", "CryptoShark Database", 1000000);
+    var database = QLS.LocalStorage.openDatabaseSync(process.name, "1.0", "CryptoShark Database", 1000000);
     database.transaction(function (tx) {
         tx.executeSql("CREATE TABLE IF NOT EXISTS modules (" +
             "id INTEGER PRIMARY KEY, " +
@@ -22,6 +25,7 @@ function open(process, callback) {
             "offset INTEGER NOT NULL, " +
             "exported INTEGER NOT NULL DEFAULT 0, " +
             "calls INTEGER NOT NULL DEFAULT 0, " +
+            "probe_script TEXT, " +
             "FOREIGN KEY(module) REFERENCES modules(id)" +
         ")");
         tx.executeSql("CREATE INDEX IF NOT EXISTS functions_index ON functions(module, calls, exported);");
@@ -162,6 +166,8 @@ function Functions(modules, scheduler) {
     var database = null;
     var collections = {};
     var functionByName = {};
+    var functionByAddress = {};
+    var logHandlers = [];
 
     function Collection(module) {
         var items = [];
@@ -187,12 +193,13 @@ function Functions(modules, scheduler) {
         this.load = function (database) {
             database.transaction(function (tx) {
                 var rows = tx.executeSql("SELECT * FROM functions WHERE module = ? ORDER BY calls DESC", [module.id]).rows;
-                var allItems = Array.prototype.slice.call(rows);
+                var allItems = Array.prototype.map.call(rows, loadFunction);
                 items = allItems.filter(function (item) {
                     return item.calls > 0;
                 });
                 allItems.forEach(function (func) {
                     functionByName[func.name] = func;
+                    functionByAddress[func.address] = func;
                 });
                 functionByOffset = allItems.reduce(function (functions, func) {
                     functions[func.offset] = func;
@@ -221,14 +228,9 @@ function Functions(modules, scheduler) {
                 if (func) {
                     func.calls += calls;
                 } else {
-                    func = {
-                        name: functionName(module, offset),
-                        module: module.id,
-                        offset: offset,
-                        exported: false,
-                        calls: calls
-                    };
+                    func = createFunction(functionName(module, offset), offset, calls);
                     functionByName[func.name] = func;
+                    functionByAddress[func.address] = func;
                     functionByOffset[offset] = func;
                 }
                 updated.push(func);
@@ -259,6 +261,52 @@ function Functions(modules, scheduler) {
             scheduler.schedule(flush);
         };
 
+        this.updateProbeId = function (func, id) {
+            func = functionByOffset[func.offset];
+            func.probe.id = id;
+            var index = items.indexOf(func);
+            notifyObservers('onFunctionsUpdate', items, [index, 'probe', func.probe]);
+        };
+
+        function createFunction(name, offset, calls) {
+            return {
+                name: name,
+                address: bigInt(module.base).add(bigInt(offset)).toString(),
+                module: module.id,
+                offset: offset,
+                exported: false,
+                calls: calls,
+                probe: {
+                    id: -1,
+                    script: ""
+                }
+            };
+        }
+
+        function loadFunction(data) {
+            return {
+                id: data.id,
+                name: data.name,
+                address: bigInt(module.base).add(bigInt(data.offset)).toString(),
+                module: data.module,
+                offset: data.offset,
+                exported: data.exported,
+                calls: data.calls,
+                probe: {
+                    id: -1,
+                    script: data.probe_script || ""
+                }
+            };
+        }
+
+        function bigInt(value) {
+            if (typeof value === 'string' && value.indexOf("0x") === 0) {
+                return Vendor.bigInt(value.substr(2), 16);
+            } else {
+                return Vendor.bigInt(value);
+            }
+        }
+
         function functionName(module, offset) {
             return functionPrefix(module) + "_" + offset.toString(16);
         }
@@ -285,9 +333,9 @@ function Functions(modules, scheduler) {
                         if (dirty.hasOwnProperty(name)) {
                             var func = dirty[name];
                             if (func.id) {
-                                tx.executeSql("UPDATE functions SET name = ?, exported = ?, calls = ? WHERE id = ?", [func.name, func.exported, func.calls, func.id]);
+                                tx.executeSql("UPDATE functions SET name = ?, exported = ?, calls = ?, probe_script = ? WHERE id = ?", [func.name, func.exported, func.calls, func.probe.script || null, func.id]);
                             } else {
-                                var result = tx.executeSql("INSERT INTO functions (name, module, offset, exported, calls) VALUES (?, ?, ?, ?, ?)", [name, module.id, func.offset, func.exported, func.calls]);
+                                var result = tx.executeSql("INSERT INTO functions (name, module, offset, exported, calls, probe_script) VALUES (?, ?, ?, ?, ?, ?)", [name, module.id, func.offset, func.exported, func.calls, func.probe.script || null]);
                                 func.id = result.insertId;
                             }
                             finishedNames.push(name);
@@ -326,14 +374,9 @@ function Functions(modules, scheduler) {
                                 func.name = name;
                                 func.exported = true;
                             } else {
-                                func = {
-                                    name: name,
-                                    module: module.id,
-                                    offset: offset,
-                                    exported: true,
-                                    calls: 0
-                                };
+                                func = createFunction(name, offset, 0);
                                 functionByName[name] = func;
+                                functionByAddress[func.address] = func;
                                 functionByOffset[offset] = func;
                             }
 
@@ -386,6 +429,10 @@ function Functions(modules, scheduler) {
 
     this.allInModule = function (module) {
         return getCollection(module).observable;
+    };
+
+    this.updateProbeId = function (func, id) {
+        collections[func.module].updateProbeId(func, id);
     };
 
     Object.defineProperty(this, 'database', {
@@ -443,6 +490,22 @@ function Functions(modules, scheduler) {
 
             modules.incrementCalls(moduleCalls);
         });
+    };
+
+    this.log = function (entry) {
+        var func = functionByAddress[entry.address];
+        var message = entry.message;
+        logHandlers.forEach(function (handler) {
+            handler(func, message);
+        });
+    };
+
+    this.addLogHandler = function (handler) {
+        logHandlers.push(handler);
+    };
+
+    this.removeLogHandler = function (handler) {
+        logHandlers.splice(logHandlers.indexOf(handler), 1);
     };
 
     Object.freeze(this);

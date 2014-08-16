@@ -18,8 +18,8 @@ ModuleMonitor.prototype._sendModules = function (modules) {
 
 ModuleMonitor.prototype.getFunctions = function (module) {
     return new Promise(function (resolve) {
-        var functions = [];
-        var base = this._moduleMap.base(module.name);
+        const functions = [];
+        const base = this._moduleMap.base(module.name);
         Module.enumerateExports(module.name, {
             onMatch: function (exp) {
                 if (exp.type === 'function') {

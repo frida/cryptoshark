@@ -69,12 +69,12 @@ ModuleMap.prototype.symbol = function (address) {
 
 function resolveCollisions(modules) {
     const nameCounts = modules.reduce(function (names, mod) {
-        var count = names[mod.name] || 0;
+        const count = names[mod.name] || 0;
         names[mod.name] = count + 1;
         return names;
     });
     const pathCounts = modules.reduce(function (paths, mod) {
-        var count = paths[mod.path] || 0;
+        const count = paths[mod.path] || 0;
         paths[mod.path] = count + 1;
         return paths;
     });

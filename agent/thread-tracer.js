@@ -5,8 +5,11 @@ module.exports = ThreadTracer;
 function ThreadTracer(moduleMap) {
     this.handlers = {
         'thread:follow': this.follow,
-        'thread:unfollow': this.unfollow
+        'thread:unfollow': this.unfollow,
+        'function:add-probe': this.addProbe,
+        'function:remove-probe': this.removeProbe
     };
+    this._probes = {};
     this._moduleMap = moduleMap;
     Object.freeze(this);
 }
@@ -51,3 +54,51 @@ ThreadTracer.prototype.unfollow = function (thread) {
         resolve({});
     });
 };
+
+ThreadTracer.prototype.addProbe = function (func) {
+    return new Promise(function (resolve) {
+        let id = this._probes[func.address];
+        if (!id) {
+            try {
+                id = Stalker.addCallProbe(ptr(func.address), probeCallback(func));
+            } catch (e) {
+                resolve(-1);
+                return;
+            }
+            this._probes[func.address] = id;
+        }
+        resolve(id);
+    }.bind(this));
+};
+
+ThreadTracer.prototype.removeProbe = function (func) {
+    return new Promise(function (resolve) {
+        const id = this._probes[func.address];
+        if (id) {
+            Stalker.removeCallProbe(id);
+            delete this._probes[func.address];
+        }
+        resolve(typeof id !== 'undefined');
+    }.bind(this));
+};
+
+function probeCallback(func) {
+    const address = func.address;
+    const toString = function (arg) {
+        return arg.toString();
+    };
+    function log() {
+        send({
+            name: 'function:log',
+            payload: {
+                address: address,
+                message: Array.prototype.slice.call(arguments).map(toString).join(", ")
+            }
+        });
+    }
+
+    const handler = new Function('args', 'log', func.script);
+    return function (args) {
+        handler.call(this, args, log);
+    };
+}

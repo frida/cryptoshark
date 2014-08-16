@@ -1,7 +1,6 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.2
 import QtQuick.Dialogs 1.2
-import QtQuick.LocalStorage 2.0
 import QtQuick.Window 2.0
 import Frida 1.0
 
@@ -177,6 +176,14 @@ ApplicationWindow {
             _request('thread:unfollow', {id: threadId}, callback);
         }
 
+        function addProbe(address, script, callback) {
+            _request('function:add-probe', {address: address, script: script}, callback);
+        }
+
+        function removeProbe(address, callback) {
+            _request('function:remove-probe', {address: address}, callback);
+        }
+
         function disassemble(address, callback) {
             _request('function:disassemble', {address: address}, callback);
         }
@@ -239,6 +246,9 @@ ApplicationWindow {
                         break;
                      case 'thread:summary':
                          Models.functions.update(payload);
+                         break;
+                     case 'function:log':
+                         Models.functions.log(payload);
                          break;
                      default:
                          console.log('Unhandled: ' + JSON.stringify(stanza));

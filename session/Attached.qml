@@ -1,10 +1,9 @@
 import QtQuick 2.0
 import QtQuick.Controls 1.2
+import QtQuick.Controls.Styles 1.1
 import QtQuick.Layouts 1.1
 
 import "../components"
-import "../vendor.js" as Vendor
-
 SplitView {
     property var agentService: null
     property alias threadsModel: threadsView.model
@@ -26,8 +25,7 @@ SplitView {
     onCurrentFunctionChanged: {
         var func = currentFunction;
         if (func) {
-            var address = _bigInt(currentModule.base).add(_bigInt(func.offset)).toString();
-            agentService.disassemble(address, function (instructions) {
+            agentService.disassemble(func.address, function (instructions) {
                 disassembly.render(instructions);
             });
         }
@@ -54,18 +52,22 @@ SplitView {
         }
     }
 
-    function _bigInt(value) {
-        if (typeof value === 'string' && value.indexOf("0x") === 0) {
-            return Vendor.bigInt(value.substr(2), 16);
-        } else {
-            return Vendor.bigInt(value);
-        }
-    }
-
     orientation: Qt.Horizontal
 
     ListModel {
         id: functions
+
+        function addProbe(func) {
+            agentService.addProbe(func.address, func.probe.script || "log(args[0], args[1], args[2], args[3]);", function (id) {
+                models.functions.updateProbeId(func, id);
+            });
+        }
+
+        function removeProbe(func) {
+            agentService.removeProbe(func.address, function (id) {
+                models.functions.updateProbeId(func, -1);
+            });
+        }
 
         function onFunctionsUpdate(items, partialUpdate) {
             if (partialUpdate) {
@@ -73,6 +75,11 @@ SplitView {
                 var property = partialUpdate[1];
                 var value = partialUpdate[2];
                 setProperty(index, property, value);
+
+                var func = items[index];
+                if (currentFunction && func.id === currentFunction.id) {
+                    currentFunction = func;
+                }
             } else {
                 clear();
                 for (var i = 0; i !== items.length; i++) {
@@ -112,7 +119,6 @@ SplitView {
                 TableViewColumn { role: "tags"; title: "Tags"; width: 100 }
             }
             Row {
-                id: actions
                 Layout.fillWidth: true
 
                 Button {
@@ -202,10 +208,68 @@ SplitView {
                 TableViewColumn { role: "name"; title: "Function"; width: 83 }
                 TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
             }
+            Row {
+                Layout.fillWidth: true
+
+                Button {
+                    property string _action: !!currentFunction && currentFunction.probe.id !== -1 ? 'remove' : 'add'
+                    text: _action === 'add' ? qsTr("Add Probe") : qsTr("Remove Probe")
+                    enabled: !!currentFunction
+                    onClicked: {
+                        if (_action === 'add') {
+                            functions.addProbe(currentFunction);
+                        } else {
+                            functions.removeProbe(currentFunction);
+                        }
+                    }
+                }
+            }
         }
     }
 
-    DisassemblyView {
-        id: disassembly
+    SplitView {
+        orientation: Qt.Vertical
+
+        DisassemblyView {
+            id: disassembly
+            Layout.fillHeight: true
+        }
+
+        TextArea {
+            id: log
+
+            property int _length: 0
+
+            Component.onCompleted: {
+                models.functions.addLogHandler(onLogMessage);
+            }
+
+            Component.onDestruction: {
+                models.functions.removeLogHandler(onLogMessage);
+            }
+
+            function onLogMessage(func, message) {
+                if (_length === 0) {
+                    text = "";
+                } else {
+                    text += "\n";
+                }
+                text += "<font color=\"#ffffff\"><a href=\"" + func.address + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>";
+                _length++;
+            }
+
+            onLinkActivated: {
+                // TODO
+            }
+
+            Layout.minimumHeight: 200
+            style: TextAreaStyle {
+                backgroundColor: "#060606"
+            }
+            font.family: "Lucida Console"
+            textFormat: TextEdit.RichText
+            wrapMode: TextEdit.NoWrap
+            readOnly: true
+        }
     }
 }

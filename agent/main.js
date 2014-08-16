@@ -13,8 +13,6 @@ const stanzaHandlers = {};
 ModuleMap.build().then(start);
 
 function start(moduleMap) {
-    send({name: 'modules:update', payload: moduleMap.modules});
-
     services.moduleMonitor = new ModuleMonitor(moduleMap);
     services.threadMonitor = new ThreadMonitor();
     services.tracer = new ThreadTracer(moduleMap);
