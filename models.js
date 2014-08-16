@@ -1,5 +1,5 @@
+.import CryptoShark 1.0 as CS
 .import QtQuick.LocalStorage 2.0 as QLS
-.import "vendor.js" as Vendor
 
 var scheduler = new IOScheduler();
 var modules = new Modules();
@@ -271,7 +271,7 @@ function Functions(modules, scheduler) {
         function createFunction(name, offset, calls) {
             return {
                 name: name,
-                address: bigInt(module.base).add(bigInt(offset)).toString(),
+                address: CS.NativePointer.fromBaseAndOffset(module.base, offset),
                 module: module.id,
                 offset: offset,
                 exported: false,
@@ -287,7 +287,7 @@ function Functions(modules, scheduler) {
             return {
                 id: data.id,
                 name: data.name,
-                address: bigInt(module.base).add(bigInt(data.offset)).toString(),
+                address: CS.NativePointer.fromBaseAndOffset(module.base, data.offset),
                 module: data.module,
                 offset: data.offset,
                 exported: data.exported,
@@ -297,14 +297,6 @@ function Functions(modules, scheduler) {
                     script: data.probe_script || ""
                 }
             };
-        }
-
-        function bigInt(value) {
-            if (typeof value === 'string' && value.indexOf("0x") === 0) {
-                return Vendor.bigInt(value.substr(2), 16);
-            } else {
-                return Vendor.bigInt(value);
-            }
         }
 
         function functionName(module, offset) {

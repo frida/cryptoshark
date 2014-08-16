@@ -4,6 +4,7 @@ import QtQuick.Controls.Styles 1.1
 import QtQuick.Layouts 1.1
 
 import "../components"
+
 SplitView {
     property var agentService: null
     property alias threadsModel: threadsView.model
@@ -43,7 +44,7 @@ SplitView {
                 functionsView.currentRow = 0;
                 functionsView.selection.clear();
                 functionsView.selection.select(0);
-                currentFunction = functions.get(0);
+                currentFunction = _functionsObservable.items[0];
             } else {
                 functionsView.currentRow = -1;
                 functionsView.selection.clear();
@@ -74,7 +75,9 @@ SplitView {
                 var index = partialUpdate[0];
                 var property = partialUpdate[1];
                 var value = partialUpdate[2];
-                setProperty(index, property, value);
+                if (property === 'name' || property === 'calls') {
+                    setProperty(index, property, value);
+                }
 
                 var func = items[index];
                 if (currentFunction && func.id === currentFunction.id) {
@@ -83,17 +86,24 @@ SplitView {
             } else {
                 clear();
                 for (var i = 0; i !== items.length; i++) {
-                    append(items[i]);
+                    append(modelObject(items[i]));
                 }
             }
         }
 
         function onFunctionsAdd(index, func) {
-            insert(index, func);
+            insert(index, modelObject(func));
         }
 
         function onFunctionsMove(oldIndex, newIndex) {
             move(oldIndex, newIndex, 1);
+        }
+
+        function modelObject(func) {
+            return {
+                name: func.name,
+                calls: func.calls
+            };
         }
     }
 
@@ -198,7 +208,7 @@ SplitView {
                 id: functionsView
 
                 onCurrentRowChanged: {
-                    currentFunction = model.get(currentRow) || null;
+                    currentFunction = _functionsObservable.items[currentRow] || null;
                 }
 
                 model: functions
