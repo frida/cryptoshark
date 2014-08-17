@@ -6,6 +6,8 @@ import QtQuick.Layouts 1.1
 import "../components"
 
 SplitView {
+    id: attachedView
+
     property var agentService: null
     property alias threadsModel: threadsView.model
     property var models: null
@@ -59,7 +61,7 @@ SplitView {
         id: functions
 
         function addProbe(func) {
-            agentService.addProbe(func.address, func.probe.script || "log(args[0], args[1], args[2], args[3]);", function (id) {
+            agentService.addProbe(func.address, func.probe.script, function (id) {
                 models.functions.updateProbeId(func, id);
             });
         }
@@ -73,13 +75,15 @@ SplitView {
         function onFunctionsUpdate(items, partialUpdate) {
             if (partialUpdate) {
                 var index = partialUpdate[0];
+                var func = items[index];
                 var property = partialUpdate[1];
                 var value = partialUpdate[2];
                 if (property === 'name' || property === 'calls') {
                     setProperty(index, property, value);
+                } else if (property === 'probe.script') {
+                    agentService.updateProbe(func.address, value);
                 }
 
-                var func = items[index];
                 if (currentFunction && func.id === currentFunction.id) {
                     currentFunction = func;
                 }
@@ -248,7 +252,7 @@ SplitView {
         TextArea {
             id: log
 
-            property int _length: 0
+            property var _lineLengths: []
 
             Component.onCompleted: {
                 models.functions.addLogHandler(onLogMessage);
@@ -259,17 +263,20 @@ SplitView {
             }
 
             function onLogMessage(func, message) {
-                if (_length === 0) {
-                    text = "";
-                } else {
-                    text += "\n";
+                var lengthBefore = length;
+                append("<font color=\"#ffffff\"><a href=\"" + func.address + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
+                var lengthAfter = length;
+                var lineLength = lengthAfter - lengthBefore;
+                _lineLengths.push(lineLength);
+                if (_lineLengths.length === 11) {
+                    var firstLineLength = _lineLengths.splice(0, 1)[0];
+                    remove(0, firstLineLength);
                 }
-                text += "<font color=\"#ffffff\"><a href=\"" + func.address + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>";
-                _length++;
             }
 
             onLinkActivated: {
-                // TODO
+                scriptDialog.functionAddress = link;
+                scriptDialog.open();
             }
 
             Layout.minimumHeight: 200
@@ -280,6 +287,12 @@ SplitView {
             textFormat: TextEdit.RichText
             wrapMode: TextEdit.NoWrap
             readOnly: true
+
+            ScriptDialog {
+                id: scriptDialog
+
+                models: attachedView.models
+            }
         }
     }
 }

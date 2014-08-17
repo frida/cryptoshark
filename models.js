@@ -168,6 +168,7 @@ function Functions(modules, scheduler) {
     var functionByName = {};
     var functionByAddress = {};
     var logHandlers = [];
+    var defaultScript = "log(args[0], args[1], args[2], args[3]);";
 
     function Collection(module) {
         var items = [];
@@ -265,7 +266,16 @@ function Functions(modules, scheduler) {
             func = functionByOffset[func.offset];
             func.probe.id = id;
             var index = items.indexOf(func);
-            notifyObservers('onFunctionsUpdate', items, [index, 'probe', func.probe]);
+            notifyObservers('onFunctionsUpdate', items, [index, 'probe.id', func.probe.id]);
+        };
+
+        this.updateProbeScript = function (func, script) {
+            func = functionByOffset[func.offset];
+            func.probe.script = script;
+            var index = items.indexOf(func);
+            notifyObservers('onFunctionsUpdate', items, [index, 'probe.script', func.probe.script]);
+            dirty[func.name] = func;
+            scheduler.schedule(flush);
         };
 
         function createFunction(name, offset, calls) {
@@ -278,7 +288,7 @@ function Functions(modules, scheduler) {
                 calls: calls,
                 probe: {
                     id: -1,
-                    script: ""
+                    script: defaultScript
                 }
             };
         }
@@ -294,7 +304,7 @@ function Functions(modules, scheduler) {
                 calls: data.calls,
                 probe: {
                     id: -1,
-                    script: data.probe_script || ""
+                    script: data.probe_script || defaultScript
                 }
             };
         }
@@ -325,9 +335,9 @@ function Functions(modules, scheduler) {
                         if (dirty.hasOwnProperty(name)) {
                             var func = dirty[name];
                             if (func.id) {
-                                tx.executeSql("UPDATE functions SET name = ?, exported = ?, calls = ?, probe_script = ? WHERE id = ?", [func.name, func.exported, func.calls, func.probe.script || null, func.id]);
+                                tx.executeSql("UPDATE functions SET name = ?, exported = ?, calls = ?, probe_script = ? WHERE id = ?", [func.name, func.exported, func.calls, func.probe.script, func.id]);
                             } else {
-                                var result = tx.executeSql("INSERT INTO functions (name, module, offset, exported, calls, probe_script) VALUES (?, ?, ?, ?, ?, ?)", [name, module.id, func.offset, func.exported, func.calls, func.probe.script || null]);
+                                var result = tx.executeSql("INSERT INTO functions (name, module, offset, exported, calls, probe_script) VALUES (?, ?, ?, ?, ?, ?)", [name, module.id, func.offset, func.exported, func.calls, func.probe.script]);
                                 func.id = result.insertId;
                             }
                             finishedNames.push(name);
@@ -427,6 +437,10 @@ function Functions(modules, scheduler) {
         collections[func.module].updateProbeId(func, id);
     };
 
+    this.updateProbeScript = function (func, script) {
+        collections[func.module].updateProbeScript(func, script);
+    };
+
     Object.defineProperty(this, 'database', {
         get: function () {
             return database;
@@ -445,6 +459,10 @@ function Functions(modules, scheduler) {
             }
         }
     });
+
+    this.getByAddress = function (address) {
+        return functionByAddress[address] || null;
+    };
 
     this.update = function (update) {
         database.transaction(function (tx) {

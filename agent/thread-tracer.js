@@ -7,7 +7,8 @@ function ThreadTracer(moduleMap) {
         'thread:follow': this.follow,
         'thread:unfollow': this.unfollow,
         'function:add-probe': this.addProbe,
-        'function:remove-probe': this.removeProbe
+        'function:remove-probe': this.removeProbe,
+        'function:update-probe': this.updateProbe
     };
     this._probes = {};
     this._moduleMap = moduleMap;
@@ -57,36 +58,57 @@ ThreadTracer.prototype.unfollow = function (thread) {
 
 ThreadTracer.prototype.addProbe = function (func) {
     return new Promise(function (resolve) {
-        let id = this._probes[func.address];
-        if (!id) {
+        let probe = this._probes[func.address];
+        if (!probe) {
+            let handlerHolder;
             try {
-                id = Stalker.addCallProbe(ptr(func.address), probeCallback(func));
+                handlerHolder = [handler(func.script)];
             } catch (e) {
                 resolve(-1);
                 return;
             }
-            this._probes[func.address] = id;
+            const id = Stalker.addCallProbe(ptr(func.address), probeCallback(func.address, handlerHolder));
+            probe = {
+                id: id,
+                handlerHolder: handlerHolder
+            };
+            this._probes[func.address] = probe;
         }
-        resolve(id);
+        resolve(probe.id);
     }.bind(this));
 };
 
 ThreadTracer.prototype.removeProbe = function (func) {
     return new Promise(function (resolve) {
-        const id = this._probes[func.address];
-        if (id) {
-            Stalker.removeCallProbe(id);
+        const probe = this._probes[func.address];
+        if (probe) {
+            Stalker.removeCallProbe(probe.id);
             delete this._probes[func.address];
         }
-        resolve(typeof id !== 'undefined');
+        resolve(!!probe);
     }.bind(this));
 };
 
-function probeCallback(func) {
-    const address = func.address;
-    const toString = function (arg) {
-        return arg.toString();
-    };
+ThreadTracer.prototype.updateProbe = function (func) {
+    return new Promise(function (resolve) {
+        const probe = this._probes[func.address];
+        if (probe) {
+            try {
+                probe.handlerHolder[0] = handler(func.script);
+            } catch (e) {
+                resolve(false);
+                return;
+            }
+        }
+        resolve(!!probe);
+    }.bind(this));
+};
+
+function handler(script) {
+    return new Function('args', 'log', script);
+}
+
+function probeCallback(address, handlerHolder) {
     function log() {
         send({
             name: 'function:log',
@@ -96,9 +118,11 @@ function probeCallback(func) {
             }
         });
     }
+    function toString(arg) {
+        return arg.toString();
+    }
 
-    const handler = new Function('args', 'log', func.script);
     return function (args) {
-        handler.call(this, args, log);
+        handlerHolder[0].call(this, args, log);
     };
 }

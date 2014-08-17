@@ -16,7 +16,29 @@ ApplicationWindow {
 
     Component.onCompleted: {
         processDialog.open();
+
+        /*
+        Models.open({name: "1337-hello"}, function () {
+            scriptDialog.models = Models;
+            var module = Models.modules.allWithCalls().items[0];
+            var functions = Models.functions.allInModule(module);
+            var items = functions.items;
+            for (var i = 0; i !== items.length; i++) {
+                if (items[i].name === "nanosleep$UNIX2003") {
+                    scriptDialog.functionAddress = items[i].address;
+                    break;
+                }
+            }
+            scriptDialog.open();
+        });
+        */
     }
+
+    /*
+    ScriptDialog {
+        id: scriptDialog
+    }
+    */
 
     function attach(process) {
         if (_process !== null && process.pid === _process.pid) {
@@ -182,6 +204,10 @@ ApplicationWindow {
 
         function removeProbe(address, callback) {
             _request('function:remove-probe', {address: address}, callback);
+        }
+
+        function updateProbe(address, script, callback) {
+            _request('function:update-probe', {address: address, script: script}, callback);
         }
 
         function disassemble(address, callback) {
