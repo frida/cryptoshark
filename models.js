@@ -262,18 +262,38 @@ function Functions(modules, scheduler) {
             scheduler.schedule(flush);
         };
 
+        this.updateName = function (func, newName) {
+            var oldName = func.name;
+            if (newName === oldName) {
+                return;
+            }
+
+            if (functionByName[newName]) {
+                throw new Error("Function name already in use");
+            }
+
+            func = functionByOffset[func.offset];
+            func.name = newName;
+            delete functionByName[oldName];
+            functionByName[newName] = func;
+            notifyObservers('onFunctionsUpdate', items, [items.indexOf(func), 'name', newName]);
+
+            delete dirty[oldName];
+            dirty[newName] = func;
+            scheduler.schedule(flush);
+        };
+
         this.updateProbeId = function (func, id) {
             func = functionByOffset[func.offset];
             func.probe.id = id;
-            var index = items.indexOf(func);
-            notifyObservers('onFunctionsUpdate', items, [index, 'probe.id', func.probe.id]);
+            notifyObservers('onFunctionsUpdate', items, [items.indexOf(func), 'probe.id', func.probe.id]);
         };
 
         this.updateProbeScript = function (func, script) {
             func = functionByOffset[func.offset];
             func.probe.script = script;
-            var index = items.indexOf(func);
-            notifyObservers('onFunctionsUpdate', items, [index, 'probe.script', func.probe.script]);
+            notifyObservers('onFunctionsUpdate', items, [items.indexOf(func), 'probe.script', func.probe.script]);
+
             dirty[func.name] = func;
             scheduler.schedule(flush);
         };
@@ -431,6 +451,10 @@ function Functions(modules, scheduler) {
 
     this.allInModule = function (module) {
         return getCollection(module).observable;
+    };
+
+    this.updateName = function (func, newName) {
+        collections[func.module].updateName(func, newName);
     };
 
     this.updateProbeId = function (func, id) {

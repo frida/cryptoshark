@@ -19,26 +19,20 @@ ApplicationWindow {
 
         /*
         Models.open({name: "1337-hello"}, function () {
-            scriptDialog.models = Models;
+            funcDialog.models = Models;
             var module = Models.modules.allWithCalls().items[0];
             var functions = Models.functions.allInModule(module);
             var items = functions.items;
             for (var i = 0; i !== items.length; i++) {
-                if (items[i].name === "nanosleep$UNIX2003") {
-                    scriptDialog.functionAddress = items[i].address;
+                if (items[i].name.indexOf("sleep") !== -1) {
+                    funcDialog.address = items[i].address;
                     break;
                 }
             }
-            scriptDialog.open();
+            funcDialog.open();
         });
         */
     }
-
-    /*
-    ScriptDialog {
-        id: scriptDialog
-    }
-    */
 
     function attach(process) {
         if (_process !== null && process.pid === _process.pid) {
@@ -118,16 +112,6 @@ ApplicationWindow {
         ]
     }
 
-    ProcessDialog {
-        id: processDialog
-
-        onSelected: {
-            app.attach(process);
-        }
-
-        model: processModel
-    }
-
     Component {
         id: detachedComponent
 
@@ -153,7 +137,24 @@ ApplicationWindow {
             agentService: agent
             threadsModel: _threadsModel
             models: _models
+            functionDialog: funcDialog
         }
+    }
+
+    ProcessDialog {
+        id: processDialog
+
+        onSelected: {
+            app.attach(process);
+        }
+
+        model: processModel
+    }
+
+    FunctionDialog {
+        id: funcDialog
+
+        models: _models
     }
 
     MessageDialog {

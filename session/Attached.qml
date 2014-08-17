@@ -11,6 +11,7 @@ SplitView {
     property var agentService: null
     property alias threadsModel: threadsView.model
     property var models: null
+    property var functionDialog: null
 
     property var currentModule: null
     property var currentFunction: null
@@ -80,6 +81,8 @@ SplitView {
                 var value = partialUpdate[2];
                 if (property === 'name' || property === 'calls') {
                     setProperty(index, property, value);
+                } else if (property === 'probe.id') {
+                    setProperty(index, 'status', value !== -1 ? 'P' : '');
                 } else if (property === 'probe.script') {
                     agentService.updateProbe(func.address, value);
                 }
@@ -106,7 +109,8 @@ SplitView {
         function modelObject(func) {
             return {
                 name: func.name,
-                calls: func.calls
+                calls: func.calls,
+                status: func.probe.id !== -1 ? 'P' : ''
             };
         }
     }
@@ -215,10 +219,16 @@ SplitView {
                     currentFunction = _functionsObservable.items[currentRow] || null;
                 }
 
+                onActivated: {
+                    functionDialog.address = currentFunction.address;
+                    functionDialog.open();
+                }
+
                 model: functions
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
+                TableViewColumn { role: "status"; title: ""; width: 20 }
                 TableViewColumn { role: "name"; title: "Function"; width: 83 }
                 TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
             }
@@ -246,6 +256,7 @@ SplitView {
 
         DisassemblyView {
             id: disassembly
+            Layout.fillWidth: true
             Layout.fillHeight: true
         }
 
@@ -255,14 +266,16 @@ SplitView {
             property var _lineLengths: []
 
             Component.onCompleted: {
-                models.functions.addLogHandler(onLogMessage);
+                models.functions.addLogHandler(_onLogMessage);
+                functionDialog.rename.connect(_onRename);
             }
 
             Component.onDestruction: {
-                models.functions.removeLogHandler(onLogMessage);
+                functionDialog.rename.disconnect(_onRename);
+                models.functions.removeLogHandler(_onLogMessage);
             }
 
-            function onLogMessage(func, message) {
+            function _onLogMessage(func, message) {
                 var lengthBefore = length;
                 append("<font color=\"#ffffff\"><a href=\"" + func.address + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
                 var lengthAfter = length;
@@ -274,11 +287,16 @@ SplitView {
                 }
             }
 
-            onLinkActivated: {
-                scriptDialog.functionAddress = link;
-                scriptDialog.open();
+            function _onRename(func, oldName, newName) {
+                text = text.replace(new RegExp("(<a href=\"" + func.address + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
             }
 
+            onLinkActivated: {
+                functionDialog.address = link;
+                functionDialog.open();
+            }
+
+            Layout.fillWidth: true
             Layout.minimumHeight: 200
             style: TextAreaStyle {
                 backgroundColor: "#060606"
@@ -287,12 +305,6 @@ SplitView {
             textFormat: TextEdit.RichText
             wrapMode: TextEdit.NoWrap
             readOnly: true
-
-            ScriptDialog {
-                id: scriptDialog
-
-                models: attachedView.models
-            }
         }
     }
 }

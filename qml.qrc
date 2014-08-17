@@ -8,6 +8,6 @@
         <file>components/DisassemblyView.qml</file>
         <file>components/ProcessDialog.qml</file>
         <file>models.js</file>
-        <file>components/ScriptDialog.qml</file>
+        <file>components/FunctionDialog.qml</file>
     </qresource>
 </RCC>
