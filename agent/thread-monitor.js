@@ -113,6 +113,18 @@ function apis() {
         },
         {
             module: {
+                "windows": "advapi32.dll"
+            },
+            functions: [
+                "CryptEncrypt",
+                "CryptDecrypt"
+            ],
+            onEnter: function () {
+                return 'crypto';
+            }
+        },
+        {
+            module: {
                 "darwin": "libcommonCrypto.dylib"
             },
             functions: [
@@ -120,6 +132,17 @@ function apis() {
             ],
             onEnter: function () {
                 return 'crypto';
+            }
+        },
+        {
+            module: {
+                "windows": "user32.dll"
+            },
+            functions: [
+                "BeginPaint"
+            ],
+            onEnter: function () {
+                return 'gui';
             }
         },
         {
