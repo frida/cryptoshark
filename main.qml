@@ -46,6 +46,7 @@ ApplicationWindow {
     }
 
     function detach() {
+        loader.item.dispose();
         agent.instances[0].stop();
         _process = null;
         _models.close();
@@ -72,7 +73,7 @@ ApplicationWindow {
                 id: detach
                 text: qsTr("Detach")
                 onTriggered: {
-                    detach();
+                    app.detach();
                 }
             }
             MenuItem {
@@ -84,6 +85,7 @@ ApplicationWindow {
 
     Loader {
         id: loader
+
         anchors.fill: parent
         sourceComponent: detachedComponent
 

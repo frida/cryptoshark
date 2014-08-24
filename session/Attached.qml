@@ -18,7 +18,9 @@ SplitView {
 
     property var _functionsObservable: null
 
-    Component.onDestruction: {
+    function dispose() {
+        log.dispose();
+        modulesView.dispose();
         _updateFunctionsObservable(null);
     }
 
@@ -166,7 +168,7 @@ SplitView {
                     observable.addObserver(this);
                 }
 
-                Component.onDestruction: {
+                function dispose() {
                     observable.removeObserver(this);
                 }
 
@@ -270,7 +272,7 @@ SplitView {
                 functionDialog.rename.connect(_onRename);
             }
 
-            Component.onDestruction: {
+            function dispose() {
                 functionDialog.rename.disconnect(_onRename);
                 models.functions.removeLogHandler(_onLogMessage);
             }
