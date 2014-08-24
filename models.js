@@ -44,6 +44,7 @@ function close() {
 
 function Modules() {
     var database = null;
+    var synched = false;
     var metadataProvider = null;
     var cache = {};
 
@@ -54,7 +55,9 @@ function Modules() {
         var observable = {
             addObserver: function (observer) {
                 observers.push(observer);
-                observer.onModulesUpdate(items);
+                if (synched) {
+                    observer.onModulesUpdate(items);
+                }
             },
             removeObserver: function (observer) {
                 observers.splice(observers.indexOf(observer), 1);
@@ -69,6 +72,7 @@ function Modules() {
             database.transaction(function (tx) {
                 var rows = tx.executeSql("SELECT * FROM modules WHERE calls > 0 ORDER BY calls DESC").rows;
                 items = Array.prototype.slice.call(rows);
+
                 notifyObservers('onModulesUpdate', items);
             });
         };
@@ -102,12 +106,8 @@ function Modules() {
         },
         set: function (value) {
             database = value;
+            synched = false;
             cache = {};
-            if (database) {
-                allWithCalls.load(database);
-            } else {
-                allWithCalls.unload();
-            }
         }
     });
 
@@ -129,6 +129,7 @@ function Modules() {
                     tx.executeSql("UPDATE modules SET path = ?, base = ? WHERE name = ?", [mod.path, mod.base, mod.name]);
                 }
             });
+            synched = true;
             cache = {};
 
             allWithCalls.load(database);
@@ -164,11 +165,25 @@ function Modules() {
 
 function Functions(modules, scheduler) {
     var database = null;
+    var synched = false;
     var collections = {};
     var functionByName = {};
     var functionByAddress = {};
     var logHandlers = [];
     var defaultScript = "log(args[0], args[1], args[2], args[3]);";
+
+    var modulesSynchedObserver = {
+        onModulesUpdate: function (items) {
+            if (!synched) {
+                synched = true;
+                for (var moduleId in collections) {
+                    if (collections.hasOwnProperty(moduleId)) {
+                        collections[moduleId].load(database);
+                    }
+                }
+            }
+        }
+    };
 
     function Collection(module) {
         var items = [];
@@ -180,7 +195,9 @@ function Functions(modules, scheduler) {
         var observable = {
             addObserver: function (observer) {
                 observers.push(observer);
-                observer.onFunctionsUpdate(items);
+                if (synched) {
+                    observer.onFunctionsUpdate(items);
+                }
             },
             removeObserver: function (observer) {
                 observers.splice(observers.indexOf(observer), 1);
@@ -441,7 +458,7 @@ function Functions(modules, scheduler) {
         var collection = collections[module.id];
         if (!collection) {
             collection = new Collection(module);
-            if (database) {
+            if (database && synched) {
                 collection.load(database);
             }
             collections[module.id] = collection;
@@ -470,17 +487,15 @@ function Functions(modules, scheduler) {
             return database;
         },
         set: function (value) {
-            database = value;
-
-            for (var moduleId in collections) {
-                if (collections.hasOwnProperty(moduleId)) {
-                    if (database) {
-                        collections[moduleId].load(database);
-                    } else {
-                        collections[moduleId].unload();
-                    }
-                }
+            if (database !== null && value === null) {
+                modules.allWithCalls().removeObserver(modulesSynchedObserver);
             }
+            database = value;
+            synched = false;
+            collections = {};
+            functionByName = {};
+            functionByAddress = {};
+            modules.allWithCalls().addObserver(modulesSynchedObserver);
         }
     });
 
