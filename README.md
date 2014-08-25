@@ -2,10 +2,12 @@
 
 An open source cross-platform debugger powered by Frida and Capstone.
 
-Screencast:
+## Screencast
+
 [![ScreenShot](http://img.youtube.com/vi/hzDsxtcRavY/0.jpg)](https://www.youtube.com/watch?v=hzDsxtcRavY)
 
-Binaries:
+## Binaries
+
 - [Windows](http://build.frida.re/frida/windows/Win32-Release/bin/cryptoshark-0.1.1.exe)
 - Mac: coming soon
 - Linux: coming soon
