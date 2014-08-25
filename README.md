@@ -2,30 +2,32 @@
 
 An open source cross-platform debugger powered by Frida and Capstone.
 
+Screencast:
 [![ScreenShot](http://img.youtube.com/vi/hzDsxtcRavY/0.jpg)](https://www.youtube.com/watch?v=hzDsxtcRavY)
 
 Binaries:
-
 - [Windows](http://build.frida.re/frida/windows/Win32-Release/bin/cryptoshark-0.1.1.exe)
 - Mac: coming soon
 - Linux: coming soon
 
-## Building agent.js
+## Building
 
-### Install build-time dependencies
+### Building agent.js
+
+#### Install build-time dependencies
     npm install -g gulp
     npm install
 
-### Build
+#### Build
     gulp build
 
-### Lint
+#### Lint
     gulp lint
 
-### Watch while developing
+#### Watch while developing
     gulp watch
 
-## Building CryptoShark
+### Building the GUI
 
 - Install [Qt 5.3.1](http://qt-project.org/downloads) or newer. (For now
   do not use their online installer, as it's still at 5.3.0, which has some
