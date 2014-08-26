@@ -13,7 +13,7 @@ carefully injecting logging and other side-effecty code.
 ## Binaries
 
 - [Windows](http://build.frida.re/frida/windows/Win32-Release/bin/cryptoshark-0.1.1.exe)
-- Mac: coming soon
+- [Mac](http://build.frida.re/frida/mac/CryptoShark-0.1.1.dmg)
 - Linux: coming soon
 
 ## Building
