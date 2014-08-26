@@ -1,6 +1,10 @@
 # CryptoShark
 
-An open source cross-platform debugger powered by Frida and Capstone.
+Self-optimizing cross-platform code tracer based on dynamic recompilation,
+powered by Frida and Capstone. Works at the machine code level, no source
+code needed. Tags threads based on which APIs they use, showing you in
+real-time what functions have been called, allowing you to study them by
+carefully injecting logging and other side-effecty code.
 
 ## Screencast
 
