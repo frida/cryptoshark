@@ -39,7 +39,7 @@ carefully injecting logging and other side-effecty code.
   do not use their online installer, as it's still at 5.3.0, which has some
   rendering bugs.)
 
-- Grab the latest frida-qml binaries from [http://build.frida.re/frida/](here).
+- Grab the latest frida-qml binaries from [here](http://build.frida.re/frida/).
   For example: http://build.frida.re/frida/mac/lib/qt5/qml/Frida/
   Download the entire directory and add it to your Qt installation's `qml`
   directory (on Mac it is typically: `~/Qt/5.3/clang_64/qml/`).
