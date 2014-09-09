@@ -2,3 +2,6 @@
 /agent.js
 /node_modules
 /vendor.js
+/tools/dist
+/tools/openssl-*
+/tools/qt5

@@ -48,3 +48,42 @@ carefully injecting logging and other side-effecty code.
 
 - Open `cryptoshark.pro` with Qt Creator, select the `Release` configuration
   and hit `Run`.
+
+### Building QT on Windows
+
+#### Prerequisites
+
+* MS Visual Studio 2013
+* Windows SDK 8.1
+* Git
+* Perl
+* Python
+* nasm
+
+Review all the paths in `tools\env.bat` to make sure everything matches your
+system.
+
+#### Building OpenSSL
+
+- Enter the environment by running `tools\env.bat`.
+
+- Download the latest openssl tarball and extract it in `tools\`.
+
+- Change to that directory and run: `..\01-build-openssl.bat`.
+
+#### Building Qt
+
+- Enter the environment by running `tools\env.bat`.
+
+- Get the qt5 repo: `git clone git://gitorious.org/qt/qt5.git qt5`
+
+- Switch to the 5.4 branch:
+
+```
+cd qt5
+git checkout 5.4
+```
+
+- Get the source code: `perl init-repository --no-webkit`
+
+- Change to `qt5\qtbase` and run: `..\..\02-build-qt.bat`
