@@ -1,6 +1,15 @@
+/*.opensdf
+/*.sdf
+/*.sln
+/*.suo
 /*.user
+/*.vcxproj*
 /agent.js
+/cryptoshark_plugin_import.cpp
+/cryptoshark_qml_plugin_import.cpp
+/debug
 /node_modules
+/release
 /vendor.js
 /tools/dist
 /tools/openssl-*
