@@ -67,9 +67,9 @@ system.
 
 - Enter the environment by running `tools\env.bat`.
 
-- Download the latest openssl tarball and extract it in `tools\`.
+- Download the latest openssl tarball and extract it next to the CryptoShark repo.
 
-- Change to that directory and run: `..\01-build-openssl.bat`.
+- Change to that directory and run: `..\CryptoShark\tools\01-build-openssl.bat`.
 
 #### Building Qt
 
@@ -86,9 +86,7 @@ git checkout 5.4
 
 - Get the source code: `perl init-repository --no-webkit`
 
-- Change working directory to `qt5\qtbase` and run: `..\..\02-build-qt.bat`
-
-- Add qt5\qtbase\bin to your PATH: `set PATH=C:\src\cryptoshark\tools\qt5\qtbase\bin;%PATH%`
+- Change working directory to `qt5\qtbase` and run: `..\..\CryptoShark\tools\02-build-qt.bat`
 
 - Change working directory to `qt5\qtdeclarative`
 
