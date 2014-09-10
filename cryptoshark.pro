@@ -21,3 +21,7 @@ include(deployment.pri)
 
 HEADERS += \
     nativepointer.h
+
+win32 {
+    QMAKE_LFLAGS += /SAFESEH:NO
+}
