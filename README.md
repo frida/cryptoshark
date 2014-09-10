@@ -86,4 +86,16 @@ git checkout 5.4
 
 - Get the source code: `perl init-repository --no-webkit`
 
-- Change to `qt5\qtbase` and run: `..\..\02-build-qt.bat`
+- Change working directory to `qt5\qtbase` and run: `..\..\02-build-qt.bat`
+
+- Add qt5\qtbase\bin to your PATH: `set PATH=C:\src\cryptoshark\tools\qt5\qtbase\bin;%PATH%`
+
+- Change working directory to `qt5\qtdeclarative`
+
+- Cherry-pick a hotfix: `git fetch https://codereview.qt-project.org/qt/qtdeclarative refs/changes/28/94328/2 && git checkout FETCH_HEAD`
+
+- Run: `qmake` followed by `nmake`
+
+- Change working directory to `qt5\qtquickcontrols`
+
+- Run: `qmake` followed by `nmake`
