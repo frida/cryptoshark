@@ -8,6 +8,9 @@ import "components"
 import "session"
 import "models.js" as Models
 
+// qmlimportscanner needs to see this one for static linking:
+import QtQuick.PrivateWidgets 1.1
+
 ApplicationWindow {
     id: app
 

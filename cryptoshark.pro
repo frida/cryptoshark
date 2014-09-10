@@ -2,6 +2,10 @@ TEMPLATE = app
 
 QT += qml quick widgets
 
+QTPLUGIN.bearer = -
+QTPLUGIN.imageformats = -
+QTPLUGIN.qmltooling = -
+
 SOURCES += main.cpp \
     nativepointer.cpp
 
