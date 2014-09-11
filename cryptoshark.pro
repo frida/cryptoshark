@@ -40,6 +40,7 @@ exists($$COREPRL) {
 
 cryptoshark_static_qt {
     DEFINES += CRYPTOSHARK_STATIC_QT=1
+    RESOURCES += cryptoshark_qml_plugin_import.qrc
 }
 
 win32 {
