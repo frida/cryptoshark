@@ -16,9 +16,11 @@ carefully injecting logging and other side-effecty code.
 - [Mac](http://build.frida.re/frida/mac/CryptoShark-0.1.1.dmg)
 - Linux: coming soon
 
-## Building
+## Building for local development
 
 ### Building agent.js
+
+This is the blob of JavaScript that CryptoShark injects into target processes.
 
 #### Install build-time dependencies
     npm install -g gulp
@@ -33,7 +35,7 @@ carefully injecting logging and other side-effecty code.
 #### Watch while developing
     gulp watch
 
-### Building the GUI
+### Building the application
 
 - Install [Qt 5.3.1](http://qt-project.org/downloads) or newer. (For now
   do not use their online installer, as it's still at 5.3.0, which has some
@@ -49,9 +51,14 @@ carefully injecting logging and other side-effecty code.
 - Open `cryptoshark.pro` with Qt Creator, select the `Release` configuration
   and hit `Run`.
 
-### Building QT on Windows
+## Building a portable Windows binary
 
-#### Prerequisites
+In order to build a portable binary we will need a static build of Qt and
+frida-qml. This is not recommended for development due to the prolonged linking
+times, but it is very useful for generating a portable CryptoShark binary
+without any external dependencies.
+
+### Prerequisites
 
 * MS Visual Studio 2013
 * Windows SDK 8.1
@@ -61,21 +68,18 @@ carefully injecting logging and other side-effecty code.
 * nasm
 
 Review all the paths in `tools\env.bat` to make sure everything matches your
-system.
+system. Now, run it to enter the environment, which is required for the next
+steps.
 
-#### Building OpenSSL
-
-- Enter the environment by running `tools\env.bat`.
+### Building OpenSSL
 
 - Download the latest openssl tarball and extract it next to the CryptoShark repo.
 
 - Change to that directory and run: `..\CryptoShark\tools\01-build-openssl.bat`.
 
-#### Building Qt
+### Building Qt
 
-- Enter the environment by running `tools\env.bat`.
-
-- Get the qt5 repo: `git clone git://gitorious.org/qt/qt5.git qt5`
+- Get the qt5 repo: `git clone git://gitorious.org/qt/qt5.git qt5`.
 
 - Switch to the 5.4 branch:
 
@@ -84,16 +88,31 @@ cd qt5
 git checkout 5.4
 ```
 
-- Get the source code: `perl init-repository --no-webkit`
+- Get the source code: `perl init-repository --no-webkit`.
 
-- Change working directory to `qt5\qtbase` and run: `..\..\CryptoShark\tools\02-build-qt.bat`
+- Change working directory to `qt5\qtbase` and run: `..\..\CryptoShark\tools\02-build-qt.bat`.
 
-- Change working directory to `qt5\qtdeclarative`
+- Change working directory to `qt5\qtdeclarative`.
+- Cherry-pick a hotfix: `git fetch https://codereview.qt-project.org/qt/qtdeclarative refs/changes/28/94328/2 && git checkout FETCH_HEAD`.
+- Run: `qmake` followed by `nmake`.
 
-- Cherry-pick a hotfix: `git fetch https://codereview.qt-project.org/qt/qtdeclarative refs/changes/28/94328/2 && git checkout FETCH_HEAD`
+- Change to `qt5\qtquickcontrols` and run `qmake` followed by `nmake`.
 
-- Run: `qmake` followed by `nmake`
+### Building frida-qml
 
-- Change working directory to `qt5\qtquickcontrols`
+- Build `frida.sln` for `Release|Win32` as described [here](http://www.frida.re/docs/building/).
 
-- Run: `qmake` followed by `nmake`
+- Edit `frida-qml.pro` and change `win32:installPath` to point to
+  your `qt5\qtbase\qml\Frida`.
+
+- Change to `frida\frida-qml` and run `qmake` followed by `nmake install`.
+
+### Building CryptoShark
+
+- Run `npm install` followed by `gulp build`.
+
+- Run `tools\generate-qml-imports-qrc.py`.
+
+- Run `qmake` followed by `nmake`.
+
+- A fresh new portable binary is now at: `release\cryptoshark.exe`.
