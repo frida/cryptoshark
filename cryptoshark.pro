@@ -38,6 +38,10 @@ exists($$COREPRL) {
     }
 }
 
+cryptoshark_static_qt {
+    DEFINES += CRYPTOSHARK_STATIC_QT=1
+}
+
 win32 {
     QMAKE_LFLAGS += /SAFESEH:NO
 }
