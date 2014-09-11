@@ -23,6 +23,21 @@ include(deployment.pri)
 HEADERS += \
     nativepointer.h
 
+unix {
+    PARTS = $$[QT_INSTALL_LIBS] libQt5Core.prl
+    COREPRL = $$join(PARTS, "/")
+}
+win32 {
+    PARTS = $$[QT_INSTALL_LIBS] Qt5Core.prl
+    COREPRL = $$join(PARTS, "\\")
+}
+exists($$COREPRL) {
+    include($$COREPRL)
+    !contains(QMAKE_PRL_CONFIG, shared) {
+        CONFIG += cryptoshark_static_qt
+    }
+}
+
 win32 {
     QMAKE_LFLAGS += /SAFESEH:NO
 }
