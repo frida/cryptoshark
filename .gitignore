@@ -7,6 +7,7 @@
 /agent.js
 /cryptoshark_plugin_import.cpp
 /cryptoshark_qml_plugin_import.cpp
+/cryptoshark_qml_plugin_import.qrc
 /debug
 /node_modules
 /release
