@@ -6,7 +6,8 @@ QTPLUGIN.bearer = -
 QTPLUGIN.imageformats = -
 QTPLUGIN.qmltooling = -
 
-SOURCES += main.cpp \
+SOURCES += \
+    main.cpp \
     nativepointer.cpp
 
 RESOURCES += qml.qrc
