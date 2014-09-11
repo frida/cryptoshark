@@ -9,6 +9,9 @@
 /cryptoshark_qml_plugin_import.cpp
 /cryptoshark_qml_plugin_import.qrc
 /debug
+/Makefile
+/Makefile.Debug
+/Makefile.Release
 /node_modules
 /release
 /vendor.js
