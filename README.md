@@ -81,20 +81,18 @@ steps.
 
 - Get the qt5 repo: `git clone git://gitorious.org/qt/qt5.git qt5`.
 
-- Switch to the 5.4 branch:
+- Switch to the 5.3 branch:
 
 ```
 cd qt5
-git checkout 5.4
+git checkout 5.3
 ```
 
 - Get the source code: `perl init-repository --no-webkit`.
 
-- Change working directory to `qt5\qtbase` and run: `..\..\CryptoShark\tools\02-build-qt.bat`.
+- Change working directory to `qt5\qtbase` and run `..\..\CryptoShark\tools\02-build-qt.bat`.
 
-- Change working directory to `qt5\qtdeclarative`.
-- Cherry-pick a hotfix: `git fetch https://codereview.qt-project.org/qt/qtdeclarative refs/changes/28/94328/2 && git checkout FETCH_HEAD`.
-- Run: `qmake` followed by `nmake`.
+- Change working directory to `qt5\qtdeclarative` and run `qmake` followed by `nmake`.
 
 - Change to `qt5\qtquickcontrols` and run `qmake` followed by `nmake`.
 
