@@ -1,6 +1,6 @@
 TEMPLATE = app
 
-QT += qml quick widgets
+QT += qml quick sql widgets
 
 QTPLUGIN.bearer = -
 QTPLUGIN.imageformats = -
