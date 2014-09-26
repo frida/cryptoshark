@@ -6,6 +6,8 @@
 class NativePointer : public QObject
 {
     Q_OBJECT
+    Q_DISABLE_COPY(NativePointer)
+
 public:
     explicit NativePointer(QObject *parent = 0);
 

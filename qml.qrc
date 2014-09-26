@@ -7,7 +7,6 @@
         <file>session/Detached.qml</file>
         <file>components/DisassemblyView.qml</file>
         <file>components/ProcessDialog.qml</file>
-        <file>models.js</file>
         <file>components/FunctionDialog.qml</file>
     </qresource>
 </RCC>

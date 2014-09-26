@@ -1,6 +1,7 @@
 TEMPLATE = app
 
 QT += qml quick sql widgets
+CONFIG += c+11
 
 QTPLUGIN.bearer = -
 QTPLUGIN.imageformats = -
@@ -8,7 +9,11 @@ QTPLUGIN.qmltooling = -
 
 SOURCES += \
     main.cpp \
-    nativepointer.cpp
+    nativepointer.cpp \
+    models.cpp \
+    models/functions.cpp \
+    models/modules.cpp \
+    router.cpp
 
 RESOURCES += qml.qrc
 
@@ -21,7 +26,11 @@ QMAKE_INFO_PLIST = Info.plist
 include(deployment.pri)
 
 HEADERS += \
-    nativepointer.h
+    nativepointer.h \
+    models.h \
+    models/functions.h \
+    models/modules.h \
+    router.h
 
 unix {
     PARTS = $$[QT_INSTALL_LIBS] libQt5Core.prl

@@ -1,3 +1,5 @@
+import CryptoShark 1.0
+
 import QtQuick 2.2
 import QtQuick.Controls 1.2
 import QtQuick.Dialogs 1.2
@@ -6,7 +8,6 @@ import Frida 1.0
 
 import "components"
 import "session"
-import "models.js" as Models
 
 // qmlimportscanner needs to see this one for static linking:
 import QtQuick.PrivateWidgets 1.1
@@ -19,22 +20,6 @@ ApplicationWindow {
 
     Component.onCompleted: {
         processDialog.open();
-
-        /*
-        Models.open({name: "1337-hello"}, function () {
-            funcDialog.models = Models;
-            var module = Models.modules.allWithCalls().items[0];
-            var functions = Models.functions.allInModule(module);
-            var items = functions.items;
-            for (var i = 0; i !== items.length; i++) {
-                if (items[i].name.indexOf("sleep") !== -1) {
-                    funcDialog.address = items[i].address;
-                    break;
-                }
-            }
-            funcDialog.open();
-        });
-        */
     }
 
     function attach(process) {
@@ -42,10 +27,9 @@ ApplicationWindow {
             return;
         }
         _process = process;
-        Models.open(process, function () {
-            _models = Models;
-            Frida.localSystem.inject(agent, process.pid);
-        });
+        Models.open(process.name);
+        _models = Models;
+        Frida.localSystem.inject(agent, process.pid);
     }
 
     function detach() {
@@ -166,16 +150,6 @@ ApplicationWindow {
         id: errorDialog
     }
 
-    Timer {
-        Component.onCompleted: {
-            Models.scheduler.configure(this);
-        }
-
-        onTriggered: {
-            Models.scheduler.tick();
-        }
-    }
-
     ListModel {
         id: _threadsModel
     }
@@ -195,6 +169,16 @@ ApplicationWindow {
 
         property var _requests: Object()
         property var _nextRequestId: 1
+
+        Component.onCompleted: {
+            Router.attach(this);
+            Router.message.connect(this._onMessage);
+        }
+
+        onError: {
+            errorDialog.text = message;
+            errorDialog.open();
+        }
 
         function follow(threadId, callback) {
             _request('thread:follow', {id: threadId}, callback);
@@ -249,11 +233,7 @@ ApplicationWindow {
             }
         }
 
-        onError: {
-            errorDialog.text = message;
-            errorDialog.open();
-        }
-        onMessage: {
+        function _onMessage(sender, object, data) {
             if (object.type === 'send') {
                 var id = object.payload.id;
                 if (id) {
@@ -267,8 +247,7 @@ ApplicationWindow {
                 var payload = stanza.payload;
                 switch (stanza.name) {
                     case 'modules:update':
-                        Models.modules.metadataProvider = this;
-                        Models.modules.update(payload);
+                        _models.modules.update(payload);
                         break;
                     case 'threads:update':
                         _onThreadsUpdate(payload);
@@ -277,10 +256,10 @@ ApplicationWindow {
                         _onThreadUpdate(payload);
                         break;
                      case 'thread:summary':
-                         Models.functions.update(payload);
+                         _models.functions.update(payload);
                          break;
                      case 'function:log':
-                         Models.functions.log(payload);
+                         _models.functions.log(payload);
                          break;
                      default:
                          console.log('Unhandled: ' + JSON.stringify(stanza));
