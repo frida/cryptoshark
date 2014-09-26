@@ -1,7 +1,7 @@
 TEMPLATE = app
 
 QT += qml quick sql widgets
-CONFIG += c+11
+CONFIG += c++11
 
 QTPLUGIN.bearer = -
 QTPLUGIN.imageformats = -
