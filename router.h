@@ -17,7 +17,7 @@ public:
     Q_INVOKABLE void attach(QObject *agent);
 
 signals:
-    void message(ScriptInstance *sender, QJsonObject object, QByteArray data);
+    void message(QJsonObject object);
 
 public slots:
     void onMessage(ScriptInstance *sender, QJsonObject object, QByteArray data);

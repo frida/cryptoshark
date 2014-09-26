@@ -172,7 +172,7 @@ ApplicationWindow {
 
         Component.onCompleted: {
             Router.attach(this);
-            Router.message.connect(this._onMessage);
+            Router.message.connect(_onMessage);
         }
 
         onError: {
@@ -233,7 +233,7 @@ ApplicationWindow {
             }
         }
 
-        function _onMessage(sender, object, data) {
+        function _onMessage(object) {
             if (object.type === 'send') {
                 var id = object.payload.id;
                 if (id) {
