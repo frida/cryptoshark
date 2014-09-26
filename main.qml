@@ -246,21 +246,12 @@ ApplicationWindow {
                 var stanza = object.payload;
                 var payload = stanza.payload;
                 switch (stanza.name) {
-                    case 'modules:update':
-                        _models.modules.update(payload);
-                        break;
                     case 'threads:update':
                         _onThreadsUpdate(payload);
                         break;
                     case 'thread:update':
                         _onThreadUpdate(payload);
                         break;
-                     case 'thread:summary':
-                         _models.functions.update(payload);
-                         break;
-                     case 'function:log':
-                         _models.functions.log(payload);
-                         break;
                      default:
                          console.log('Unhandled: ' + JSON.stringify(stanza));
                          break;
