@@ -10,13 +10,14 @@ class NativePointer : public QObject
 
 public:
     explicit NativePointer(QObject *parent = 0);
+    ~NativePointer();
+
+    static NativePointer *instance();
 
     Q_INVOKABLE QString fromBaseAndOffset(QString base, int offset);
 
-signals:
-
-public slots:
-
+private:
+    static NativePointer *s_instance;
 };
 
 #endif // NATIVEPOINTER_H

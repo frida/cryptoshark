@@ -11,7 +11,7 @@ static QObject *createRouterSingleton(QQmlEngine *engine, QJSEngine *scriptEngin
     Q_UNUSED(engine);
     Q_UNUSED(scriptEngine);
 
-    return new Router();
+    return Router::instance();
 }
 
 static QObject *createModelsSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
@@ -19,7 +19,7 @@ static QObject *createModelsSingleton(QQmlEngine *engine, QJSEngine *scriptEngin
     Q_UNUSED(engine);
     Q_UNUSED(scriptEngine);
 
-    return new Models();
+    return Models::instance();
 }
 
 static QObject *createNativePointerSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
@@ -27,7 +27,7 @@ static QObject *createNativePointerSingleton(QQmlEngine *engine, QJSEngine *scri
     Q_UNUSED(engine);
     Q_UNUSED(scriptEngine);
 
-    return new NativePointer();
+    return NativePointer::instance();
 }
 
 int main(int argc, char *argv[])

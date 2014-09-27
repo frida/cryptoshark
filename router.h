@@ -13,6 +13,9 @@ class Router : public QObject
 
 public:
     explicit Router(QObject *parent = 0);
+    ~Router();
+
+    static Router *instance();
 
     Q_INVOKABLE void attach(QObject *agent);
 
@@ -21,6 +24,9 @@ signals:
 
 public slots:
     void onMessage(ScriptInstance *sender, QJsonObject object, QByteArray data);
+
+private:
+    static Router *s_instance;
 };
 
 #endif // ROUTER_H

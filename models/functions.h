@@ -1,18 +1,16 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
-#include <QObject>
+#include <QtSql/QSqlDatabase>
+#include <QtSql/QSqlTableModel>
 
-class Functions : public QObject
+class Functions : public QSqlTableModel
 {
     Q_OBJECT
+    Q_DISABLE_COPY(Functions)
+
 public:
-    explicit Functions(QObject *parent = 0);
-
-signals:
-
-public slots:
-
+    explicit Functions(QObject *parent = 0, QSqlDatabase db = QSqlDatabase());
 };
 
 #endif // FUNCTIONS_H

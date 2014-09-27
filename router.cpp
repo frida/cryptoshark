@@ -1,10 +1,26 @@
 #include "router.h"
 
+#include "models.h"
+
 #include <QMetaMethod>
+
+Router *Router::s_instance = nullptr;
 
 Router::Router(QObject *parent) :
     QObject(parent)
 {
+}
+
+Router::~Router()
+{
+    s_instance = nullptr;
+}
+
+Router *Router::instance()
+{
+    if (s_instance == nullptr)
+        s_instance = new Router();
+    return s_instance;
 }
 
 void Router::attach(QObject *agent)
@@ -26,15 +42,12 @@ void Router::onMessage(ScriptInstance *sender, QJsonObject object, QByteArray da
     if (object[QStringLiteral("type")] == QStringLiteral("send")) {
         auto stanza = object[QStringLiteral("payload")].toObject();
         auto name = stanza[QStringLiteral("name")];
-        auto nameBytes = name.toString().toUtf8();
         if (name == QStringLiteral("modules:update")) {
+            Models::instance()->modules()->apply(stanza[QStringLiteral("payload")].toArray());
             handled = true;
-
-            // TODO
         } else if (name == QStringLiteral("thread:summary")) {
-            handled = true;
-
             // TODO
+            handled = true;
         }
     }
 
