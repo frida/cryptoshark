@@ -1,9 +1,9 @@
 #include "functions.h"
 
-#include <QtSql/QSqlQuery>
+#include <QSqlQuery>
 
 Functions::Functions(QObject *parent, QSqlDatabase db) :
-    QSqlTableModel(parent, db)
+    TableModel(parent, db)
 {
     db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS functions ("
         "id INTEGER PRIMARY KEY, "
@@ -15,9 +15,10 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
         "probe_script TEXT, "
         "FOREIGN KEY(module) REFERENCES modules(id)"
     ")"));
-    db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS functions_index ON functions(module, calls, exported);"));
+    db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS functions_index ON functions(module, calls, exported)"));
 
     setTable(QStringLiteral("functions"));
     setEditStrategy(QSqlTableModel::OnManualSubmit);
     select();
+    generateRoleNames();
 }

@@ -13,7 +13,8 @@ SOURCES += \
     models.cpp \
     models/functions.cpp \
     models/modules.cpp \
-    router.cpp
+    router.cpp \
+    models/tablemodel.cpp
 
 RESOURCES += qml.qrc
 
@@ -30,7 +31,8 @@ HEADERS += \
     models.h \
     models/functions.h \
     models/modules.h \
-    router.h
+    router.h \
+    models/tablemodel.h
 
 unix {
     PARTS = $$[QT_INSTALL_LIBS] libQt5Core.prl

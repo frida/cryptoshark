@@ -1,10 +1,9 @@
 #include "modules.h"
 
 #include <QJsonObject>
-#include <QtSql/QSqlQuery>
 
 Modules::Modules(QObject *parent, QSqlDatabase db) :
-    QSqlTableModel(parent, db)
+    TableModel(parent, db)
 {
     db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS modules ("
         "id INTEGER PRIMARY KEY, "
@@ -14,29 +13,43 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
         "main INTEGER NOT NULL, "
         "calls INTEGER NOT NULL DEFAULT 0"
     ")"));
-    db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS modules_index ON modules(name, path, calls);"));
+    db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS modules_index ON modules(name, path, calls)"));
 
     setTable(QStringLiteral("modules"));
+    setFilter(QStringLiteral("calls > 0"));
+    setSort(5, Qt::SortOrder::DescendingOrder);
     setEditStrategy(QSqlTableModel::OnManualSubmit);
     select();
+    generateRoleNames();
+
+    m_insert.prepare(QStringLiteral("INSERT INTO modules (name, path, base, main) VALUES (?, ?, ?, ?)"));
+    m_update.prepare(QStringLiteral("UPDATE modules SET path = ?, base = ? WHERE name = ?"));
 }
 
 void Modules::apply(QJsonArray updates)
 {
     auto db = database();
+
     foreach (QJsonValue value, updates) {
         auto mod = value.toObject();
         auto name = mod[QStringLiteral("name")].toString();
         auto path = mod[QStringLiteral("path")].toString();
         auto base = mod[QStringLiteral("base")].toString();
         auto main = mod[QStringLiteral("main")].toBool();
+        m_update.addBindValue(path);
+        m_update.addBindValue(base);
+        m_update.addBindValue(name);
+        m_update.exec();
+        if (m_update.numRowsAffected() == 0) {
+            m_insert.addBindValue(name);
+            m_insert.addBindValue(path);
+            m_insert.addBindValue(base);
+            m_insert.addBindValue(main);
+            m_insert.exec();
+            m_insert.finish();
+        }
+        m_update.finish();
     }
 
-    /*
-    if (tx.executeSql("SELECT 1 FROM modules WHERE name = ?", [mod.name]).rows.length === 0) {
-        tx.executeSql("INSERT INTO modules (name, path, base, main) VALUES (?, ?, ?, ?)", [mod.name, mod.path, mod.base, mod.main ? 1 : 0]);
-    } else {
-        tx.executeSql("UPDATE modules SET path = ?, base = ? WHERE name = ?", [mod.path, mod.base, mod.name]);
-    }
-    */
+    select();
 }

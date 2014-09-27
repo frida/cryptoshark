@@ -24,9 +24,6 @@ SplitView {
         _updateFunctionsObservable(null);
     }
 
-    onCurrentModuleChanged: {
-    }
-
     onCurrentFunctionChanged: {
         var func = currentFunction;
         if (func) {
@@ -82,20 +79,27 @@ SplitView {
                 id: modulesView
 
                 onCurrentIndexChanged: {
-                    var current = model[currentIndex] || null;
-                    if (currentModule !== current) {
-                        currentModule = current;
+                    var currentId = model.data(currentIndex, 'id') || null;
+                    if (currentId !== null) {
+                        if (currentModule === null || currentModule.id !== currentId) {
+                            currentModule = {
+                                id: model.data(currentIndex, 'id'),
+                                name: model.data(currentIndex, 'name')
+                            };
+                        }
+                    } else if (currentModule !== null) {
+                        currentModule = null;
                     }
                 }
 
-                model: []
+                model: models.modules
                 textRole: 'name'
             }
             TableView {
                 id: functionsView
 
                 onCurrentRowChanged: {
-                    currentFunction = _functionsObservable.items[currentRow] || null;
+                    // currentFunction = _functionsObservable.items[currentRow] || null;
                 }
 
                 onActivated: {
