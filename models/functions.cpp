@@ -51,7 +51,7 @@ void Functions::addCalls(QJsonObject summary)
     while (it != end) {
         auto entry = it.value().toObject();
         auto symbolValue = entry[QStringLiteral("symbol")];
-        if (!symbolValue.isUndefined()) {
+        if (!symbolValue.isNull()) {
             auto symbol = symbolValue.toObject();
             auto moduleName = symbol[QStringLiteral("module")].toString();
             auto count = entry[QStringLiteral("count")].toInt();
