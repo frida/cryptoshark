@@ -22,19 +22,32 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
     select();
     generateRoleNames();
 
+    m_getByName.prepare(QStringLiteral("SELECT id, name, path, base, main FROM modules WHERE name = ?"));
     m_insert.prepare(QStringLiteral("INSERT INTO modules (name, path, base, main) VALUES (?, ?, ?, ?)"));
     m_update.prepare(QStringLiteral("UPDATE modules SET path = ?, base = ? WHERE name = ?"));
-    m_idFromName.prepare(QStringLiteral("SELECT id FROM modules WHERE name = ?"));
+    m_addCalls.prepare(QStringLiteral("UPDATE modules SET calls = calls + ? WHERE id = ?"));
 }
 
-int Modules::getId(QString name)
+Module *Modules::getByName(QString name)
 {
-    m_idFromName.addBindValue(name);
-    m_idFromName.exec();
-    m_idFromName.next();
-    auto id = m_idFromName.value(0).toInt();
-    m_idFromName.finish();
-    return id;
+    Module *module;
+    auto it = m_cache.find(name);
+    if (it != m_cache.end()) {
+        module = it.value();
+    } else {
+        m_getByName.addBindValue(name);
+        m_getByName.exec();
+        m_getByName.next();
+        module = new Module(this,
+                            m_getByName.value(0).toInt(),
+                            m_getByName.value(1).toString(),
+                            m_getByName.value(2).toString(),
+                            m_getByName.value(3).toULongLong(),
+                            m_getByName.value(4).toBool());
+        m_cache[name] = module;
+        m_getByName.finish();
+    }
+    return module;
 }
 
 void Modules::update(QJsonArray modules)
@@ -65,5 +78,24 @@ void Modules::update(QJsonArray modules)
 
     db.commit();
 
+    foreach (auto module, m_cache.values()) {
+        delete module;
+    }
+    m_cache.clear();
+
     select();
+}
+
+void Modules::addCalls(QHash<int, int> calls)
+{
+    auto it = calls.constBegin();
+    while (it != calls.constEnd()) {
+        auto id = it.key();
+        auto count = it.value();
+        m_addCalls.addBindValue(count);
+        m_addCalls.addBindValue(id);
+        m_addCalls.exec();
+        m_addCalls.finish();
+        ++it;
+    }
 }

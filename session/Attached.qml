@@ -1,3 +1,5 @@
+import CryptoShark 1.0
+
 import QtQuick 2.0
 import QtQuick.Controls 1.2
 import QtQuick.Controls.Styles 1.1
@@ -22,6 +24,10 @@ SplitView {
         log.dispose();
         modulesView.dispose();
         _updateFunctionsObservable(null);
+    }
+
+    onCurrentModuleChanged: {
+        models.functions.load(currentModule !== null ? currentModule.id : -1);
     }
 
     onCurrentFunctionChanged: {
@@ -84,7 +90,8 @@ SplitView {
                         if (currentModule === null || currentModule.id !== currentId) {
                             currentModule = {
                                 id: model.data(currentIndex, 'id'),
-                                name: model.data(currentIndex, 'name')
+                                name: model.data(currentIndex, 'name'),
+                                base: model.data(currentIndex, 'base')
                             };
                         }
                     } else if (currentModule !== null) {
@@ -99,7 +106,18 @@ SplitView {
                 id: functionsView
 
                 onCurrentRowChanged: {
-                    // currentFunction = _functionsObservable.items[currentRow] || null;
+                    var currentId = model.data(currentRow, 'id') || null;
+                    if (currentId !== null) {
+                        if (currentFunction === null || currentFunction.id !== currentId) {
+                            currentFunction = {
+                                id: model.data(currentRow, 'id'),
+                                name: model.data(currentRow, 'name'),
+                                address: NativePointer.fromBaseAndOffset(currentModule.base, model.data(currentRow, 'offset'))
+                            };
+                        }
+                    } else if (currentFunction !== null) {
+                        currentFunction = null;
+                    }
                 }
 
                 onActivated: {
@@ -119,7 +137,7 @@ SplitView {
                 Layout.fillWidth: true
 
                 Button {
-                    property string _action: !!currentFunction && currentFunction.probe.id !== -1 ? 'remove' : 'add'
+                    property string _action: 'add' // !!currentFunction && currentFunction.probe.id !== -1 ? 'remove' : 'add'
                     text: _action === 'add' ? qsTr("Add Probe") : qsTr("Remove Probe")
                     enabled: !!currentFunction
                     onClicked: {

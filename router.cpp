@@ -48,7 +48,7 @@ void Router::onMessage(ScriptInstance *sender, QJsonObject object, QByteArray da
         } else if (name == QStringLiteral("thread:summary")) {
             auto update = stanza[QStringLiteral("payload")].toObject();
             auto summary = update[QStringLiteral("summary")].toObject();
-            Models::instance()->functions()->updateCalls(summary);
+            Models::instance()->functions()->addCalls(summary);
             handled = true;
         }
     }
