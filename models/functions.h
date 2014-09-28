@@ -3,6 +3,9 @@
 
 #include "tablemodel.h"
 
+#include <QJsonObject>
+#include <QSqlQuery>
+
 class Functions : public TableModel
 {
     Q_OBJECT
@@ -11,6 +14,12 @@ class Functions : public TableModel
 public:
     explicit Functions(QObject *parent = 0,
                        QSqlDatabase db = QSqlDatabase());
+
+    void updateCalls(QJsonObject summary);
+
+private:
+    QSqlQuery m_insert;
+    QSqlQuery m_incrementCalls;
 };
 
 #endif // FUNCTIONS_H

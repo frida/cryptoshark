@@ -15,11 +15,13 @@ public:
     explicit Modules(QObject *parent = 0,
                      QSqlDatabase db = QSqlDatabase());
 
-    void apply(QJsonArray updates);
+    int getId(QString name);
+    void update(QJsonArray modules);
 
 private:
     QSqlQuery m_insert;
     QSqlQuery m_update;
+    QSqlQuery m_idFromName;
 };
 
 #endif // MODULES_H

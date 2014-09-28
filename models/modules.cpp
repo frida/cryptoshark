@@ -24,13 +24,24 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
 
     m_insert.prepare(QStringLiteral("INSERT INTO modules (name, path, base, main) VALUES (?, ?, ?, ?)"));
     m_update.prepare(QStringLiteral("UPDATE modules SET path = ?, base = ? WHERE name = ?"));
+    m_idFromName.prepare(QStringLiteral("SELECT id FROM modules WHERE name = ?"));
 }
 
-void Modules::apply(QJsonArray updates)
+int Modules::getId(QString name)
+{
+    m_idFromName.addBindValue(name);
+    m_idFromName.exec();
+    m_idFromName.next();
+    auto id = m_idFromName.value(0).toInt();
+    m_idFromName.finish();
+    return id;
+}
+
+void Modules::update(QJsonArray modules)
 {
     auto db = database();
 
-    foreach (QJsonValue value, updates) {
+    foreach (QJsonValue value, modules) {
         auto mod = value.toObject();
         auto name = mod[QStringLiteral("name")].toString();
         auto path = mod[QStringLiteral("path")].toString();

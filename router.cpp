@@ -43,10 +43,12 @@ void Router::onMessage(ScriptInstance *sender, QJsonObject object, QByteArray da
         auto stanza = object[QStringLiteral("payload")].toObject();
         auto name = stanza[QStringLiteral("name")];
         if (name == QStringLiteral("modules:update")) {
-            Models::instance()->modules()->apply(stanza[QStringLiteral("payload")].toArray());
+            Models::instance()->modules()->update(stanza[QStringLiteral("payload")].toArray());
             handled = true;
         } else if (name == QStringLiteral("thread:summary")) {
-            // TODO
+            auto update = stanza[QStringLiteral("payload")].toObject();
+            auto summary = update[QStringLiteral("summary")].toObject();
+            Models::instance()->functions()->updateCalls(summary);
             handled = true;
         }
     }
