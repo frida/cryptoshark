@@ -40,6 +40,7 @@ int Modules::getId(QString name)
 void Modules::update(QJsonArray modules)
 {
     auto db = database();
+    db.transaction();
 
     foreach (QJsonValue value, modules) {
         auto mod = value.toObject();
@@ -61,6 +62,8 @@ void Modules::update(QJsonArray modules)
         }
         m_update.finish();
     }
+
+    db.commit();
 
     select();
 }

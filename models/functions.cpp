@@ -17,7 +17,7 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
         "probe_script TEXT, "
         "FOREIGN KEY(module) REFERENCES modules(id)"
     ")"));
-    db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS functions_index ON functions(module, calls, exported)"));
+    db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS functions_index ON functions(module, offset, calls, exported)"));
 
     setTable(QStringLiteral("functions"));
     setEditStrategy(QSqlTableModel::OnManualSubmit);
@@ -31,6 +31,8 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
 void Functions::updateCalls(QJsonObject summary)
 {
     auto modules = Models::instance()->modules();
+    auto db = database();
+    db.transaction();
 
     auto it = summary.constBegin();
     auto end = summary.constEnd();
@@ -60,4 +62,6 @@ void Functions::updateCalls(QJsonObject summary)
         }
         ++it;
     }
+
+    db.commit();
 }

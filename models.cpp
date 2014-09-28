@@ -28,6 +28,8 @@ void Models::open(QString name)
     m_db = QSqlDatabase::addDatabase("QSQLITE");
     m_db.setDatabaseName(dbFilePath(name));
     m_db.open();
+    m_db.exec("PRAGMA synchronous = OFF");
+    m_db.exec("PRAGMA journal_mode = MEMORY");
 
     delete m_modules;
     delete m_functions;
