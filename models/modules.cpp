@@ -37,14 +37,17 @@ Module *Modules::getByName(QString name)
     } else {
         m_getByName.addBindValue(name);
         m_getByName.exec();
-        m_getByName.next();
-        module = new Module(this,
-                            m_getByName.value(0).toInt(),
-                            m_getByName.value(1).toString(),
-                            m_getByName.value(2).toString(),
-                            m_getByName.value(3).toULongLong(),
-                            m_getByName.value(4).toBool());
-        m_cache[name] = module;
+        if (m_getByName.next()) {
+            module = new Module(this,
+                                m_getByName.value(0).toInt(),
+                                m_getByName.value(1).toString(),
+                                m_getByName.value(2).toString(),
+                                m_getByName.value(3).toULongLong(),
+                                m_getByName.value(4).toBool());
+            m_cache[name] = module;
+        } else {
+            module = nullptr;
+        }
         m_getByName.finish();
     }
     return module;
