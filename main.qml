@@ -209,9 +209,9 @@ ApplicationWindow {
         }
 
         function _request(name, payload, callback) {
-            _requests[_nextRequestId] = callback || function () {};
-            post({id: _nextRequestId, name: name, payload: payload});
-            _nextRequestId++;
+            var id = 'a' + _nextRequestId++;
+            _requests[id] = callback || function () {};
+            post({id: id, name: name, payload: payload});
         }
 
         function _onThreadsUpdate(updatedThreads) {
@@ -252,7 +252,7 @@ ApplicationWindow {
                     case 'thread:update':
                         _onThreadUpdate(payload);
                         break;
-                     default:
+                    default:
                          console.log('Unhandled: ' + JSON.stringify(stanza));
                          break;
                 }

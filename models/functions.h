@@ -6,6 +6,7 @@
 
 #include <QJsonObject>
 #include <QRegExp>
+#include <QSet>
 #include <QSqlQuery>
 
 class Functions : public TableModel
@@ -21,12 +22,16 @@ public:
     void addCalls(QJsonObject summary);
 
 private:
+    void importModuleExports(QList<int> moduleIds);
     static QString functionName(Module *module, int offset);
     static QString functionPrefix(Module *module);
 
     int m_currentModuleId;
+    QSet<int> m_importedModules;
     QSqlQuery m_insert;
     QSqlQuery m_addCalls;
+    QSqlQuery m_checkImportNeeded;
+    QSqlQuery m_updateToExported;
     static QRegExp s_ignoredPrefixCharacters;
 };
 

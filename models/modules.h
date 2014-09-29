@@ -18,16 +18,19 @@ public:
     explicit Modules(QObject *parent = 0,
                      QSqlDatabase db = QSqlDatabase());
 
+    Module *getById(int id);
     Module *getByName(QString name);
     void update(QJsonArray modules);
     void addCalls(QHash<int, int> calls);
 
 private:
+    QSqlQuery m_getById;
     QSqlQuery m_getByName;
     QSqlQuery m_insert;
     QSqlQuery m_update;
     QSqlQuery m_addCalls;
-    QHash<QString, Module *> m_cache;
+    QHash<int, Module *> m_moduleById;
+    QHash<QString, Module *> m_moduleByName;
 };
 
 class Module : public QObject

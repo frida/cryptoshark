@@ -22,29 +22,59 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
     select();
     generateRoleNames();
 
+    m_getById.prepare(QStringLiteral("SELECT name, path, base, main FROM modules WHERE id = ?"));
     m_getByName.prepare(QStringLiteral("SELECT id, name, path, base, main FROM modules WHERE name = ?"));
     m_insert.prepare(QStringLiteral("INSERT INTO modules (name, path, base, main) VALUES (?, ?, ?, ?)"));
     m_update.prepare(QStringLiteral("UPDATE modules SET path = ?, base = ? WHERE name = ?"));
     m_addCalls.prepare(QStringLiteral("UPDATE modules SET calls = calls + ? WHERE id = ?"));
 }
 
+Module *Modules::getById(int id)
+{
+    Module *module;
+    auto it = m_moduleById.find(id);
+    if (it != m_moduleById.end()) {
+        module = it.value();
+    } else {
+        m_getById.addBindValue(id);
+        m_getById.exec();
+        if (m_getById.next()) {
+            auto name = m_getById.value(0).toString();
+            module = new Module(this,
+                                id,
+                                name,
+                                m_getById.value(1).toString(),
+                                m_getById.value(2).toULongLong(),
+                                m_getById.value(3).toBool());
+            m_moduleById[id] = module;
+            m_moduleByName[name] = module;
+        } else {
+            module = nullptr;
+        }
+        m_getByName.finish();
+    }
+    return module;
+}
+
 Module *Modules::getByName(QString name)
 {
     Module *module;
-    auto it = m_cache.find(name);
-    if (it != m_cache.end()) {
+    auto it = m_moduleByName.find(name);
+    if (it != m_moduleByName.end()) {
         module = it.value();
     } else {
         m_getByName.addBindValue(name);
         m_getByName.exec();
         if (m_getByName.next()) {
+            auto id = m_getByName.value(0).toInt();
             module = new Module(this,
-                                m_getByName.value(0).toInt(),
+                                id,
                                 m_getByName.value(1).toString(),
                                 m_getByName.value(2).toString(),
                                 m_getByName.value(3).toULongLong(),
                                 m_getByName.value(4).toBool());
-            m_cache[name] = module;
+            m_moduleById[id] = module;
+            m_moduleByName[name] = module;
         } else {
             module = nullptr;
         }
@@ -81,10 +111,11 @@ void Modules::update(QJsonArray modules)
 
     db.commit();
 
-    foreach (auto module, m_cache.values()) {
+    foreach (auto module, m_moduleById.values()) {
         delete module;
     }
-    m_cache.clear();
+    m_moduleById.clear();
+    m_moduleByName.clear();
 
     select();
 }
