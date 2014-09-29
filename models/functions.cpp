@@ -108,6 +108,9 @@ void Functions::importModuleExports(QList<int> moduleIds)
             payload[QStringLiteral("name")] = modules->getById(moduleId)->name();
             auto request = router->request(QStringLiteral("module:get-functions"), payload);
             QObject::connect(request, &Request::completed, [=] (QJsonValue result) {
+                auto db = database();
+                db.transaction();
+
                 auto functions = result.toArray();
                 foreach (auto funcValue, functions) {
                     auto func = funcValue.toArray();
@@ -141,6 +144,8 @@ void Functions::importModuleExports(QList<int> moduleIds)
                     }
                     m_updateToExported.finish();
                 }
+
+                db.commit();
             });
         }
     }
