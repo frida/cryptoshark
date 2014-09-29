@@ -109,10 +109,12 @@ SplitView {
                     var currentId = model.data(currentRow, 'id') || null;
                     if (currentId !== null) {
                         if (currentFunction === null || currentFunction.id !== currentId) {
+                            var id = model.data(currentRow, 'id');
                             currentFunction = {
-                                id: model.data(currentRow, 'id'),
+                                id: id,
                                 name: model.data(currentRow, 'name'),
-                                address: NativePointer.fromBaseAndOffset(currentModule.base, model.data(currentRow, 'offset'))
+                                address: NativePointer.fromBaseAndOffset(currentModule.base, model.data(currentRow, 'offset')),
+                                hasProbe: model.hasProbe(id)
                             };
                         }
                     } else if (currentFunction !== null) {
@@ -137,15 +139,21 @@ SplitView {
                 Layout.fillWidth: true
 
                 Button {
-                    property string _action: 'add' // !!currentFunction && currentFunction.probe.id !== -1 ? 'remove' : 'add'
+                    property string _action: !!currentFunction && currentFunction.hasProbe ? 'remove' : 'add'
                     text: _action === 'add' ? qsTr("Add Probe") : qsTr("Remove Probe")
                     enabled: !!currentFunction
                     onClicked: {
                         if (_action === 'add') {
-                            functions.addProbe(currentFunction);
+                            models.functions.addProbe(currentFunction.id);
                         } else {
-                            functions.removeProbe(currentFunction);
+                            models.functions.removeProbe(currentFunction.id);
                         }
+                        currentFunction = {
+                            id: currentFunction.id,
+                            name: currentFunction.name,
+                            address: currentFunction.address,
+                            hasProbe: models.functions.hasProbe(currentFunction.id)
+                        };
                     }
                 }
             }
@@ -167,13 +175,13 @@ SplitView {
             property var _lineLengths: []
 
             Component.onCompleted: {
-                // models.functions.addLogHandler(_onLogMessage);
+                models.functions.logMessage.connect(_onLogMessage);
                 functionDialog.rename.connect(_onRename);
             }
 
             function dispose() {
                 functionDialog.rename.disconnect(_onRename);
-                // models.functions.removeLogHandler(_onLogMessage);
+                models.functions.logMessage.disconnect(_onLogMessage);
             }
 
             function _onLogMessage(func, message) {

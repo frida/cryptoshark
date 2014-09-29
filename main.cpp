@@ -38,7 +38,9 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
 
     qRegisterMetaType<Modules *>("Modules *");
+    qRegisterMetaType<Module *>("Module *");
     qRegisterMetaType<Functions *>("Functions *");
+    qRegisterMetaType<Function *>("Function *");
 
     qmlRegisterSingletonType<NativePointer>("CryptoShark", 1, 0, "Router", createRouterSingleton);
     qmlRegisterSingletonType<NativePointer>("CryptoShark", 1, 0, "Models", createModelsSingleton);

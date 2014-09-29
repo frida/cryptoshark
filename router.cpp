@@ -85,6 +85,12 @@ void Router::onMessage(ScriptInstance *sender, QJsonObject object, QByteArray da
                 auto summary = update[QStringLiteral("summary")].toObject();
                 Models::instance()->functions()->addCalls(summary);
                 handled = true;
+            } else if (name == QStringLiteral("function:log")) {
+                auto entry = stanza[QStringLiteral("payload")].toObject();
+                auto id = entry[QStringLiteral("id")].toInt();
+                auto message = entry[QStringLiteral("message")].toString();
+                Models::instance()->functions()->addLogMessage(id, message);
+                handled = true;
             }
         }
     }

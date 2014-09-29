@@ -67,7 +67,7 @@ ThreadTracer.prototype.addProbe = function (func) {
                 resolve(-1);
                 return;
             }
-            const id = Stalker.addCallProbe(ptr(func.address), probeCallback(func.address, handlerHolder));
+            const id = Stalker.addCallProbe(ptr(func.address), probeCallback(func.id, handlerHolder));
             probe = {
                 id: id,
                 handlerHolder: handlerHolder
@@ -108,12 +108,12 @@ function handler(script) {
     return new Function('args', 'log', script);
 }
 
-function probeCallback(address, handlerHolder) {
+function probeCallback(id, handlerHolder) {
     function log() {
         send({
             name: 'function:log',
             payload: {
-                address: address,
+                id: id,
                 message: Array.prototype.slice.call(arguments).map(toString).join(", ")
             }
         });

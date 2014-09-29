@@ -188,24 +188,8 @@ ApplicationWindow {
             _request('thread:unfollow', {id: threadId}, callback);
         }
 
-        function addProbe(address, script, callback) {
-            _request('function:add-probe', {address: address, script: script}, callback);
-        }
-
-        function removeProbe(address, callback) {
-            _request('function:remove-probe', {address: address}, callback);
-        }
-
-        function updateProbe(address, script, callback) {
-            _request('function:update-probe', {address: address, script: script}, callback);
-        }
-
         function disassemble(address, callback) {
             _request('function:disassemble', {address: address}, callback);
-        }
-
-        function getModuleFunctions(moduleName, callback) {
-            _request('module:get-functions', {name: moduleName}, callback);
         }
 
         function _request(name, payload, callback) {

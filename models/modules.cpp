@@ -51,7 +51,7 @@ Module *Modules::getById(int id)
         } else {
             module = nullptr;
         }
-        m_getByName.finish();
+        m_getById.finish();
     }
     return module;
 }
@@ -92,7 +92,7 @@ void Modules::update(QJsonArray modules)
         auto mod = value.toObject();
         auto name = mod[QStringLiteral("name")].toString();
         auto path = mod[QStringLiteral("path")].toString();
-        auto base = mod[QStringLiteral("base")].toString();
+        auto base = mod[QStringLiteral("base")].toString().toULongLong(nullptr, 16);
         auto main = mod[QStringLiteral("main")].toBool();
         m_update.addBindValue(path);
         m_update.addBindValue(base);
