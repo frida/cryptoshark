@@ -123,7 +123,7 @@ SplitView {
                 }
 
                 onActivated: {
-                    functionDialog.address = currentFunction.address;
+                    functionDialog.functionId = currentFunction.id;
                     functionDialog.open();
                 }
 
@@ -197,11 +197,11 @@ SplitView {
             }
 
             function _onRename(func, oldName, newName) {
-                text = text.replace(new RegExp("(<a href=\"" + func.address + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
+                text = text.replace(new RegExp("(<a href=\"" + func.id + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
             }
 
             onLinkActivated: {
-                functionDialog.address = link;
+                functionDialog.functionId = link;
                 functionDialog.open();
             }
 

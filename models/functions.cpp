@@ -34,6 +34,7 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
     m_getById.prepare(QStringLiteral("SELECT name, module, offset, exported, probe_script FROM functions WHERE id = ?"));
     m_insert.prepare(QStringLiteral("INSERT INTO functions (name, module, offset, exported, calls) VALUES (?, ?, ?, ?, ?)"));
     m_addCalls.prepare(QStringLiteral("UPDATE functions SET calls = calls + ? WHERE module = ? AND offset = ?"));
+    m_updateName.prepare(QStringLiteral("UPDATE functions SET name = ? WHERE id = ?"));
     m_updateProbeScript.prepare(QStringLiteral("UPDATE functions SET probe_script to ? WHERE id = ?"));
     m_checkImportNeeded.prepare(QStringLiteral("SELECT 1 FROM functions WHERE module = ? AND exported = 1 LIMIT 1"));
     m_updateToExported.prepare(QStringLiteral("UPDATE functions SET name = ?, exported = 1 WHERE module = ? AND offset = ?"));
@@ -44,6 +45,15 @@ void Functions::load(int moduleId)
     m_currentModuleId = moduleId;
     setFilter(QStringLiteral("module == ") + QString::number(moduleId) + " AND calls > 0");
     select();
+}
+
+bool Functions::updateName(int functionId, QString name)
+{
+    m_updateName.addBindValue(name);
+    m_updateName.addBindValue(functionId);
+    bool success = m_updateName.exec();
+    m_updateName.finish();
+    return success;
 }
 
 bool Functions::hasProbe(int functionId) const

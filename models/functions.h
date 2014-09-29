@@ -22,6 +22,8 @@ public:
 
     Q_INVOKABLE void load(int moduleId);
 
+    Q_INVOKABLE bool updateName(int functionId, QString name);
+
     Q_INVOKABLE bool hasProbe(int functionId) const;
     Q_INVOKABLE void addProbe(int functionId);
     Q_INVOKABLE void removeProbe(int functionId);
@@ -49,6 +51,7 @@ private:
     QSqlQuery m_getById;
     QSqlQuery m_insert;
     QSqlQuery m_addCalls;
+    QSqlQuery m_updateName;
     QSqlQuery m_updateProbeScript;
     QSqlQuery m_checkImportNeeded;
     QSqlQuery m_updateToExported;
