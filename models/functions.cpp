@@ -47,12 +47,41 @@ void Functions::load(int moduleId)
     select();
 }
 
+Function *Functions::getById(int id)
+{
+    Function *function;
+    auto it = m_functionById.find(id);
+    if (it != m_functionById.end()) {
+        function = it.value();
+    } else {
+        m_getById.addBindValue(id);
+        m_getById.exec();
+        if (m_getById.next()) {
+            auto modules = Models::instance()->modules();
+            function = new Function(this,
+                                    id,
+                                    m_getById.value(0).toString(),
+                                    modules->getById(m_getById.value(1).toInt()),
+                                    m_getById.value(2).toInt(),
+                                    m_getById.value(3).toBool(),
+                                    m_getById.value(4).toString());
+            m_functionById[id] = function;
+        } else {
+            function = nullptr;
+        }
+        m_getById.finish();
+    }
+    return function;
+}
+
 bool Functions::updateName(int functionId, QString name)
 {
     m_updateName.addBindValue(name);
     m_updateName.addBindValue(functionId);
     bool success = m_updateName.exec();
     m_updateName.finish();
+    if (success)
+        invalidate(functionId);
     return success;
 }
 
@@ -97,39 +126,20 @@ void Functions::updateProbe(int functionId, QString script)
 {
     m_updateProbeScript.addBindValue(script);
     m_updateProbeScript.addBindValue(functionId);
-    m_updateProbeScript.exec();
+    bool success = m_updateProbeScript.exec();
     m_updateProbeScript.finish();
+    if (!success)
+        return;
+    invalidate(functionId);
 
     auto function = getById(functionId);
-    if (function == nullptr || !m_probes.contains(functionId))
+    if (!m_probes.contains(functionId))
         return;
 
     QJsonObject payload;
     payload[QStringLiteral("address")] = function->address();
     payload[QStringLiteral("script")] = function->probeScript();
     Router::instance()->request(QStringLiteral("function:update-probe"), payload);
-}
-
-Function *Functions::getById(int id)
-{
-    Function *function;
-    m_getById.addBindValue(id);
-    m_getById.exec();
-    if (m_getById.next()) {
-        auto modules = Models::instance()->modules();
-        function = new Function(this,
-                                id,
-                                m_getById.value(0).toString(),
-                                modules->getById(m_getById.value(1).toInt()),
-                                m_getById.value(2).toInt(),
-                                m_getById.value(3).toBool(),
-                                m_getById.value(4).toString());
-        function->deleteLater();
-    } else {
-        function = nullptr;
-    }
-    m_getById.finish();
-    return function;
 }
 
 QVariant Functions::data(int i, QString roleName) const
@@ -207,6 +217,16 @@ void Functions::addLogMessage(int functionId, QString message)
 {
     auto function = getById(functionId);
     emit logMessage(function, message);
+}
+
+void Functions::invalidate(int functionId)
+{
+    auto it = m_functionById.find(functionId);
+    if (it != m_functionById.end()) {
+        auto function = it.value();
+        m_functionById.erase(it);
+        function->deleteLater();
+    }
 }
 
 void Functions::importModuleExports(QList<int> moduleIds)

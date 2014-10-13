@@ -5,14 +5,18 @@ import QtQuick.Layouts 1.1
 
 Dialog {
     property var models: null
-    property string functionId: -1
+    property int functionId: -1
     property var _func: null
     signal rename(var func, string oldName, string newName);
 
     onFunctionIdChanged: {
-        _func = models.functions.getById(functionId);
-        name.text = _func.name;
-        script.text = _func.probeScript;
+        var f = models.functions.getById(functionId);
+        _func = {
+            id: f.id,
+            name: f.name
+        };
+        name.text = f.name;
+        script.text = f.probeScript;
     }
 
     onAccepted: {
@@ -28,7 +32,7 @@ Dialog {
             rename(_func, oldName, newName);
         }
 
-        models.functions.updateProbe(_func, script.text);
+        models.functions.updateProbe(_func.id, script.text);
     }
 
     width: 564

@@ -4,6 +4,7 @@
 #include "modules.h"
 #include "tablemodel.h"
 
+#include <QHash>
 #include <QJsonObject>
 #include <QRegExp>
 #include <QSet>
@@ -22,6 +23,7 @@ public:
 
     Q_INVOKABLE void load(int moduleId);
 
+    Q_INVOKABLE Function *getById(int id);
     Q_INVOKABLE bool updateName(int functionId, QString name);
 
     Q_INVOKABLE bool hasProbe(int functionId) const;
@@ -29,7 +31,6 @@ public:
     Q_INVOKABLE void removeProbe(int functionId);
     Q_INVOKABLE void updateProbe(int functionId, QString script);
 
-    Function *getById(int id);
     void addCalls(QJsonObject summary);
     void addLogMessage(int functionId, QString message);
 
@@ -41,11 +42,13 @@ signals:
     void logMessage(Function *function, QString message);
 
 private:
+    void invalidate(int functionId);
     void importModuleExports(QList<int> moduleIds);
     static QString functionName(Module *module, int offset);
     static QString functionPrefix(Module *module);
 
     int m_currentModuleId;
+    QHash<int, Function *> m_functionById;
     QSet<int> m_probes;
     QSet<int> m_importedModules;
     QSqlQuery m_getById;

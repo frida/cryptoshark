@@ -24,13 +24,13 @@ public:
     void addCalls(QHash<int, int> calls);
 
 private:
+    QHash<int, Module *> m_moduleById;
+    QHash<QString, Module *> m_moduleByName;
     QSqlQuery m_getById;
     QSqlQuery m_getByName;
     QSqlQuery m_insert;
     QSqlQuery m_update;
     QSqlQuery m_addCalls;
-    QHash<int, Module *> m_moduleById;
-    QHash<QString, Module *> m_moduleByName;
 };
 
 class Module : public QObject
