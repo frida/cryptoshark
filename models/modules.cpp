@@ -2,8 +2,16 @@
 
 #include <QJsonObject>
 
+static const int IdRole = Qt::UserRole + 0;
+static const int NameRole = Qt::UserRole + 1;
+static const int PathRole = Qt::UserRole + 2;
+static const int BaseRole = Qt::UserRole + 3;
+static const int MainRole = Qt::UserRole + 4;
+static const int CallsRole = Qt::UserRole + 5;
+
 Modules::Modules(QObject *parent, QSqlDatabase db) :
-    TableModel(parent, db)
+    QAbstractListModel(parent),
+    m_database(db)
 {
     db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS modules ("
         "id INTEGER PRIMARY KEY, "
@@ -13,123 +21,213 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
         "main INTEGER NOT NULL, "
         "calls INTEGER NOT NULL DEFAULT 0"
     ")"));
-    db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS modules_index ON modules(name, path, calls)"));
+    db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS modules_index ON modules(calls)"));
 
-    setTable(QStringLiteral("modules"));
-    setFilter(QStringLiteral("calls > 0"));
-    setSort(5, Qt::SortOrder::DescendingOrder);
-    setEditStrategy(QSqlTableModel::OnManualSubmit);
-    select();
-    generateRoleNames();
+    QSqlQuery all(QStringLiteral("SELECT * FROM modules ORDER BY calls DESC"), db);
+    all.setForwardOnly(true);
+    all.exec();
+    while (all.next()) {
+        auto id = all.value(0).toInt();
+        auto name = all.value(1).toString();
+        auto path = all.value(2).toString();
+        auto base = all.value(3).toULongLong();
+        auto main = all.value(4).toBool();
+        auto calls = all.value(5).toInt();
+        auto module = new Module(this, id, name, path, base, main, calls);
+        if (calls > 0)
+            m_modules.append(module);
+        m_moduleById[id] = module;
+        m_moduleByName[name] = module;
+    }
 
-    m_getById.prepare(QStringLiteral("SELECT name, path, base, main FROM modules WHERE id = ?"));
-    m_getByName.prepare(QStringLiteral("SELECT id, name, path, base, main FROM modules WHERE name = ?"));
+    m_roleNames[IdRole] = QStringLiteral("id").toUtf8();
+    m_roleNames[NameRole] = QStringLiteral("name").toUtf8();
+    m_roleNames[PathRole] = QStringLiteral("path").toUtf8();
+    m_roleNames[BaseRole] = QStringLiteral("base").toUtf8();
+    m_roleNames[MainRole] = QStringLiteral("main").toUtf8();
+    m_roleNames[CallsRole] = QStringLiteral("calls").toUtf8();
+
     m_insert.prepare(QStringLiteral("INSERT INTO modules (name, path, base, main) VALUES (?, ?, ?, ?)"));
-    m_update.prepare(QStringLiteral("UPDATE modules SET path = ?, base = ? WHERE name = ?"));
+    m_insert.setForwardOnly(true);
+    m_update.prepare(QStringLiteral("UPDATE modules SET path = ?, base = ? WHERE id = ?"));
+    m_update.setForwardOnly(true);
     m_addCalls.prepare(QStringLiteral("UPDATE modules SET calls = calls + ? WHERE id = ?"));
+    m_addCalls.setForwardOnly(true);
 }
 
 Module *Modules::getById(int id)
 {
-    Module *module;
-    auto it = m_moduleById.find(id);
-    if (it != m_moduleById.end()) {
-        module = it.value();
-    } else {
-        m_getById.addBindValue(id);
-        m_getById.exec();
-        if (m_getById.next()) {
-            auto name = m_getById.value(0).toString();
-            module = new Module(this,
-                                id,
-                                name,
-                                m_getById.value(1).toString(),
-                                m_getById.value(2).toULongLong(),
-                                m_getById.value(3).toBool());
-            m_moduleById[id] = module;
-            m_moduleByName[name] = module;
-        } else {
-            module = nullptr;
-        }
-        m_getById.finish();
-    }
-    return module;
+    return m_moduleById[id];
 }
 
 Module *Modules::getByName(QString name)
 {
-    Module *module;
-    auto it = m_moduleByName.find(name);
-    if (it != m_moduleByName.end()) {
-        module = it.value();
-    } else {
-        m_getByName.addBindValue(name);
-        m_getByName.exec();
-        if (m_getByName.next()) {
-            auto id = m_getByName.value(0).toInt();
-            module = new Module(this,
-                                id,
-                                m_getByName.value(1).toString(),
-                                m_getByName.value(2).toString(),
-                                m_getByName.value(3).toULongLong(),
-                                m_getByName.value(4).toBool());
-            m_moduleById[id] = module;
-            m_moduleByName[name] = module;
-        } else {
-            module = nullptr;
-        }
-        m_getByName.finish();
-    }
-    return module;
+    return m_moduleByName[name];
 }
 
 void Modules::update(QJsonArray modules)
 {
-    auto db = database();
-    db.transaction();
+    m_database.transaction();
 
     foreach (QJsonValue value, modules) {
-        auto mod = value.toObject();
-        auto name = mod[QStringLiteral("name")].toString();
-        auto path = mod[QStringLiteral("path")].toString();
-        auto base = mod[QStringLiteral("base")].toString().toULongLong(nullptr, 16);
-        auto main = mod[QStringLiteral("main")].toBool();
-        m_update.addBindValue(path);
-        m_update.addBindValue(base);
-        m_update.addBindValue(name);
-        m_update.exec();
-        if (m_update.numRowsAffected() == 0) {
+        auto data = value.toObject();
+        auto name = data[QStringLiteral("name")].toString();
+        auto path = data[QStringLiteral("path")].toString();
+        auto base = data[QStringLiteral("base")].toString().toULongLong(nullptr, 16);
+        auto main = data[QStringLiteral("main")].toBool();
+
+        auto module = m_moduleByName[name];
+        if (module != nullptr) {
+            m_update.addBindValue(path);
+            m_update.addBindValue(base);
+            m_update.addBindValue(module->id());
+            m_update.exec();
+            m_update.finish();
+
+            bool notifyView = module->calls() > 0;
+
+            module->m_path = path;
+            emit module->pathChanged(path);
+            module->m_base = base;
+            emit module->baseChanged(base);
+
+            if (notifyView) {
+                auto i = index(m_modules.indexOf(module));
+                QVector<int> roles;
+                roles << PathRole;
+                roles << BaseRole;
+                emit dataChanged(i, i, roles);
+            }
+        } else {
             m_insert.addBindValue(name);
             m_insert.addBindValue(path);
             m_insert.addBindValue(base);
             m_insert.addBindValue(main);
             m_insert.exec();
+            auto id = m_insert.lastInsertId().toInt();
             m_insert.finish();
+
+            module = new Module(this, id, name, path, base, main, 0);
+            m_moduleById[id] = module;
+            m_moduleByName[name] = module;
         }
-        m_update.finish();
     }
 
-    db.commit();
-
-    foreach (auto module, m_moduleById.values()) {
-        delete module;
-    }
-    m_moduleById.clear();
-    m_moduleByName.clear();
-
-    select();
+    m_database.commit();
 }
 
 void Modules::addCalls(QHash<int, int> calls)
 {
-    auto it = calls.constBegin();
-    while (it != calls.constEnd()) {
-        auto id = it.key();
-        auto count = it.value();
+    auto i = calls.constBegin();
+    auto e = calls.constEnd();
+    for (; i != e; ++i) {
+        auto id = i.key();
+        auto count = i.value();
         m_addCalls.addBindValue(count);
         m_addCalls.addBindValue(id);
         m_addCalls.exec();
         m_addCalls.finish();
-        ++it;
+
+        auto module = m_moduleById[id];
+        auto alreadyInserted = module->m_calls > 0;
+        module->m_calls += count;
+        emit module->callsChanged(module->m_calls);
+
+        QModelIndex noParent;
+        if (alreadyInserted) {
+            auto oldIndex = m_modules.indexOf(module);
+            auto newIndex = sortedIndex(module, oldIndex);
+
+            emit headerDataChanged(Qt::Vertical, oldIndex, oldIndex);
+            auto i = createIndex(oldIndex, 0);
+            QVector<int> roles;
+            roles << CallsRole;
+            emit dataChanged(i, i, roles);
+
+            if (newIndex != oldIndex) {
+                beginMoveRows(noParent, oldIndex, oldIndex, noParent, newIndex);
+                m_modules.move(oldIndex, newIndex > oldIndex ? newIndex - 1 : newIndex);
+                endMoveRows();
+            }
+        } else {
+            auto index = sortedIndex(module, m_modules.size());
+            beginInsertRows(noParent, index, index);
+            m_modules.insert(index, module);
+            endInsertRows();
+        }
+    }
+}
+
+int Modules::sortedIndex(Module *module, int currentIndex)
+{
+    int calls = module->m_calls;
+    for (int i = currentIndex - 1; i >= 0; i--) {
+        if (m_modules[i]->m_calls > calls)
+            return i + 1;
+    }
+    return 0;
+}
+
+int Modules::rowCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
+
+    return m_modules.size();
+}
+
+QVariant Modules::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    Q_UNUSED(section);
+    Q_UNUSED(orientation);
+
+    switch (role) {
+    case Qt::DisplayRole:
+        return QStringLiteral("name");
+    case IdRole:
+        return QStringLiteral("id");
+    case NameRole:
+        return QStringLiteral("name");
+    case PathRole:
+        return QStringLiteral("path");
+    case BaseRole:
+        return QStringLiteral("base");
+    case MainRole:
+        return QStringLiteral("main");
+    case CallsRole:
+        return QStringLiteral("calls");
+    default:
+        return QVariant();
+    }
+}
+
+QVariant Modules::data(int i, QString roleName) const
+{
+    return data(index(i), m_roleNames.key(roleName.toUtf8()));
+}
+
+QVariant Modules::data(const QModelIndex &index, int role) const
+{
+    auto row = index.row();
+    if (row < 0 || row >= m_modules.size())
+        return QVariant();
+    auto module = m_modules[row];
+
+    switch (role) {
+    case Qt::DisplayRole:
+        return module->m_name;
+    case IdRole:
+        return module->m_id;
+    case NameRole:
+        return module->m_name;
+    case PathRole:
+        return module->m_path;
+    case BaseRole:
+        return module->m_base;
+    case MainRole:
+        return module->m_main;
+    case CallsRole:
+        return module->m_calls;
+    default:
+        return QVariant();
     }
 }

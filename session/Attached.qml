@@ -81,17 +81,17 @@ SplitView {
                     }
                 }
             }
-            ComboBox {
+            TableView {
                 id: modulesView
 
-                onCurrentIndexChanged: {
-                    var currentId = model.data(currentIndex, 'id') || null;
+                onCurrentRowChanged: {
+                    var currentId = model.data(currentRow, 'id') || null;
                     if (currentId !== null) {
                         if (currentModule === null || currentModule.id !== currentId) {
                             currentModule = {
-                                id: model.data(currentIndex, 'id'),
-                                name: model.data(currentIndex, 'name'),
-                                base: model.data(currentIndex, 'base')
+                                id: model.data(currentRow, 'id'),
+                                name: model.data(currentRow, 'name'),
+                                base: model.data(currentRow, 'base')
                             };
                         }
                     } else if (currentModule !== null) {
@@ -100,7 +100,10 @@ SplitView {
                 }
 
                 model: models.modules
-                textRole: 'name'
+                Layout.fillWidth: true
+
+                TableViewColumn { role: "name"; title: "Module"; width: 83 }
+                TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
             }
             TableView {
                 id: functionsView

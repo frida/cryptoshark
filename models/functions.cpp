@@ -32,12 +32,19 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
     generateRoleNames();
 
     m_getById.prepare(QStringLiteral("SELECT name, module, offset, exported, probe_script FROM functions WHERE id = ?"));
+    m_getById.setForwardOnly(true);
     m_insert.prepare(QStringLiteral("INSERT INTO functions (name, module, offset, exported, calls) VALUES (?, ?, ?, ?, ?)"));
+    m_insert.setForwardOnly(true);
     m_addCalls.prepare(QStringLiteral("UPDATE functions SET calls = calls + ? WHERE module = ? AND offset = ?"));
+    m_addCalls.setForwardOnly(true);
     m_updateName.prepare(QStringLiteral("UPDATE functions SET name = ? WHERE id = ?"));
+    m_updateName.setForwardOnly(true);
     m_updateProbeScript.prepare(QStringLiteral("UPDATE functions SET probe_script to ? WHERE id = ?"));
+    m_updateProbeScript.setForwardOnly(true);
     m_checkImportNeeded.prepare(QStringLiteral("SELECT 1 FROM functions WHERE module = ? AND exported = 1 LIMIT 1"));
+    m_checkImportNeeded.setForwardOnly(true);
     m_updateToExported.prepare(QStringLiteral("UPDATE functions SET name = ?, exported = 1 WHERE module = ? AND offset = ?"));
+    m_updateToExported.setForwardOnly(true);
 }
 
 void Functions::load(int moduleId)
@@ -168,6 +175,10 @@ void Functions::addCalls(QJsonObject summary)
     auto modules = Models::instance()->modules();
     QHash<int, int> moduleCalls;
 
+    QList<QPersistentModelIndex> entireModel;
+    emit modules->layoutAboutToBeChanged(entireModel, VerticalSortHint);
+    emit layoutAboutToBeChanged(entireModel, VerticalSortHint);
+
     auto db = database();
     db.transaction();
 
@@ -207,10 +218,10 @@ void Functions::addCalls(QJsonObject summary)
 
     db.commit();
 
-    importModuleExports(moduleCalls.keys());
+    emit modules->layoutChanged(entireModel, VerticalSortHint);
+    emit layoutChanged(entireModel, VerticalSortHint);
 
-    modules->select();
-    select();
+    importModuleExports(moduleCalls.keys());
 }
 
 void Functions::addLogMessage(int functionId, QString message)
