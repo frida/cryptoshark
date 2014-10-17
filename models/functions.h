@@ -2,8 +2,8 @@
 #define FUNCTIONS_H
 
 #include "modules.h"
-#include "tablemodel.h"
 
+#include <QAbstractListModel>
 #include <QHash>
 #include <QJsonObject>
 #include <QRegExp>
@@ -12,7 +12,7 @@
 
 class Function;
 
-class Functions : public TableModel
+class Functions : public QAbstractListModel
 {
     Q_OBJECT
     Q_DISABLE_COPY(Functions)
@@ -26,7 +26,7 @@ public:
     Q_INVOKABLE Function *getById(int id);
     Q_INVOKABLE bool updateName(int functionId, QString name);
 
-    Q_INVOKABLE bool hasProbe(int functionId) const;
+    Q_INVOKABLE bool hasProbe(int functionId);
     Q_INVOKABLE void addProbe(int functionId);
     Q_INVOKABLE void removeProbe(int functionId);
     Q_INVOKABLE void updateProbe(int functionId, QString script);
@@ -34,27 +34,32 @@ public:
     void addCalls(QJsonObject summary);
     void addLogMessage(int functionId, QString message);
 
+    QHash<int, QByteArray> roleNames() const { return m_roleNames; }
+    int rowCount(const QModelIndex &parent = QModelIndex()) const;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
     Q_INVOKABLE QVariant data(int i, QString roleName) const;
     Q_INVOKABLE QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
-    QHash<int, QByteArray> roleNames() const;
 
 signals:
     void logMessage(Function *function, QString message);
 
 private:
-    void invalidate(int functionId);
     void importModuleExports(QList<int> moduleIds);
+    Function *createFunctionFromQuery(QSqlQuery query);
     static QString functionName(Module *module, int offset);
     static QString functionPrefix(Module *module);
 
     int m_currentModuleId;
+    QList<Function *> m_functions;
     QHash<int, Function *> m_functionById;
-    QSet<int> m_probes;
     QSet<int> m_importedModules;
+    QHash<int, QByteArray> m_roleNames;
+    QSqlDatabase m_database;
+    QSqlQuery m_getAll;
     QSqlQuery m_getById;
     QSqlQuery m_insert;
-    QSqlQuery m_addCalls;
     QSqlQuery m_updateName;
+    QSqlQuery m_addCalls;
     QSqlQuery m_updateProbeScript;
     QSqlQuery m_checkImportNeeded;
     QSqlQuery m_updateToExported;
@@ -67,12 +72,14 @@ class Function : public QObject
     Q_DISABLE_COPY(Function)
 
     Q_PROPERTY(int id READ id CONSTANT)
-    Q_PROPERTY(QString name READ name CONSTANT)
+    Q_PROPERTY(QString name READ name NOTIFY nameChanged)
     Q_PROPERTY(QString address READ address CONSTANT)
     Q_PROPERTY(Module *module READ module CONSTANT)
     Q_PROPERTY(int offset READ offset CONSTANT)
-    Q_PROPERTY(bool exported READ exported CONSTANT)
-    Q_PROPERTY(QString probeScript READ probeScript CONSTANT)
+    Q_PROPERTY(bool exported READ exported NOTIFY exportedChanged)
+    Q_PROPERTY(int calls READ calls NOTIFY callsChanged)
+    Q_PROPERTY(QString probeScript READ probeScript NOTIFY probeScriptChanged)
+    Q_PROPERTY(int probeActive READ probeActive NOTIFY probeActiveChanged)
 
 public:
     explicit Function(QObject *parent,
@@ -81,6 +88,7 @@ public:
                       Module *module,
                       int offset,
                       bool exported,
+                      int calls,
                       QString probeScript) :
         QObject(parent),
         m_id(id),
@@ -88,7 +96,9 @@ public:
         m_module(module),
         m_offset(offset),
         m_exported(exported),
-        m_probeScript(probeScript)
+        m_calls(calls),
+        m_probeScript(probeScript),
+        m_probeActive(false)
     {
     }
 
@@ -98,7 +108,16 @@ public:
     Module *module() const { return m_module; }
     int offset() const { return m_offset; }
     bool exported() const { return m_exported; }
+    int calls() const { return m_calls; }
     QString probeScript() const { return m_probeScript; }
+    bool probeActive() const { return m_probeActive; }
+
+signals:
+    void nameChanged(QString newName);
+    void exportedChanged(bool newExported);
+    void callsChanged(int newCalls);
+    void probeScriptChanged(QString newProbeScript);
+    void probeActiveChanged(bool newProbeActive);
 
 private:
     int m_id;
@@ -106,7 +125,11 @@ private:
     Module *m_module;
     int m_offset;
     bool m_exported;
+    int m_calls;
     QString m_probeScript;
+    bool m_probeActive;
+
+    friend class Functions;
 };
 
 #endif // FUNCTIONS_H

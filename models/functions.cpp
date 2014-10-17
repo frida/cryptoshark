@@ -4,13 +4,20 @@
 #include "router.h"
 
 static const int IdRole = Qt::UserRole + 0;
+static const int NameRole = Qt::UserRole + 1;
+static const int ModuleRole = Qt::UserRole + 2;
+static const int OffsetRole = Qt::UserRole + 3;
+static const int ExportedRole = Qt::UserRole + 4;
+static const int CallsRole = Qt::UserRole + 5;
+static const int ProbeScriptRole = Qt::UserRole + 6;
 static const int StatusRole = Qt::UserRole + 16;
 
 QRegExp Functions::s_ignoredPrefixCharacters = QRegExp(QStringLiteral("(^lib)|([-_])|(\\.[\\w.]+$)"));
 
 Functions::Functions(QObject *parent, QSqlDatabase db) :
-    TableModel(parent, db),
-    m_currentModuleId(-1)
+    QAbstractListModel(parent),
+    m_currentModuleId(-1),
+    m_database(db)
 {
     db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS functions ("
         "id INTEGER PRIMARY KEY, "
@@ -24,21 +31,25 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
     ")"));
     db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS functions_index ON functions(module, offset, calls, exported)"));
 
-    setTable(QStringLiteral("functions"));
-    setFilter(QStringLiteral("module == -1"));
-    setSort(5, Qt::SortOrder::DescendingOrder);
-    setEditStrategy(QSqlTableModel::OnManualSubmit);
-    select();
-    generateRoleNames();
+    m_roleNames[IdRole] = QStringLiteral("id").toUtf8();
+    m_roleNames[NameRole] = QStringLiteral("name").toUtf8();
+    m_roleNames[ModuleRole] = QStringLiteral("module").toUtf8();
+    m_roleNames[OffsetRole] = QStringLiteral("offset").toUtf8();
+    m_roleNames[ExportedRole] = QStringLiteral("exported").toUtf8();
+    m_roleNames[CallsRole] = QStringLiteral("calls").toUtf8();
+    m_roleNames[ProbeScriptRole] = QStringLiteral("probeScript").toUtf8();
+    m_roleNames[StatusRole] = QStringLiteral("status").toUtf8();
 
-    m_getById.prepare(QStringLiteral("SELECT name, module, offset, exported, probe_script FROM functions WHERE id = ?"));
+    m_getAll.prepare(QStringLiteral("SELECT * FROM functions WHERE module = ? ORDER BY calls DESC"));
+    m_getAll.setForwardOnly(true);
+    m_getById.prepare(QStringLiteral("SELECT * FROM functions WHERE id = ?"));
     m_getById.setForwardOnly(true);
     m_insert.prepare(QStringLiteral("INSERT INTO functions (name, module, offset, exported, calls) VALUES (?, ?, ?, ?, ?)"));
     m_insert.setForwardOnly(true);
-    m_addCalls.prepare(QStringLiteral("UPDATE functions SET calls = calls + ? WHERE module = ? AND offset = ?"));
-    m_addCalls.setForwardOnly(true);
     m_updateName.prepare(QStringLiteral("UPDATE functions SET name = ? WHERE id = ?"));
     m_updateName.setForwardOnly(true);
+    m_addCalls.prepare(QStringLiteral("UPDATE functions SET calls = calls + ? WHERE module = ? AND offset = ?"));
+    m_addCalls.setForwardOnly(true);
     m_updateProbeScript.prepare(QStringLiteral("UPDATE functions SET probe_script to ? WHERE id = ?"));
     m_updateProbeScript.setForwardOnly(true);
     m_checkImportNeeded.prepare(QStringLiteral("SELECT 1 FROM functions WHERE module = ? AND exported = 1 LIMIT 1"));
@@ -49,32 +60,35 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
 
 void Functions::load(int moduleId)
 {
+    beginResetModel();
+
     m_currentModuleId = moduleId;
-    setFilter(QStringLiteral("module == ") + QString::number(moduleId) + " AND calls > 0");
-    select();
+
+    m_getAll.addBindValue(moduleId);
+    m_getAll.exec();
+    while (m_getAll.next()) {
+        auto id = m_getAll.value(0).toInt();
+        Function *function = m_functionById[id];
+        if (function == nullptr) {
+            function = createFunctionFromQuery(m_getAll);
+            m_functionById[id] = function;
+        }
+        m_functions.append(function);
+    }
+    m_getAll.finish();
+
+    endResetModel();
 }
 
 Function *Functions::getById(int id)
 {
-    Function *function;
-    auto it = m_functionById.find(id);
-    if (it != m_functionById.end()) {
-        function = it.value();
-    } else {
+    Function *function = m_functionById[id];
+    if (function == nullptr) {
         m_getById.addBindValue(id);
         m_getById.exec();
         if (m_getById.next()) {
-            auto modules = Models::instance()->modules();
-            function = new Function(this,
-                                    id,
-                                    m_getById.value(0).toString(),
-                                    modules->getById(m_getById.value(1).toInt()),
-                                    m_getById.value(2).toInt(),
-                                    m_getById.value(3).toBool(),
-                                    m_getById.value(4).toString());
+            function = createFunctionFromQuery(m_getById);
             m_functionById[id] = function;
-        } else {
-            function = nullptr;
         }
         m_getById.finish();
     }
@@ -87,14 +101,15 @@ bool Functions::updateName(int functionId, QString name)
     m_updateName.addBindValue(functionId);
     bool success = m_updateName.exec();
     m_updateName.finish();
-    if (success)
-        invalidate(functionId);
     return success;
 }
 
-bool Functions::hasProbe(int functionId) const
+bool Functions::hasProbe(int functionId)
 {
-    return m_probes.contains(functionId);
+    auto function = getById(functionId);
+    if (function == nullptr)
+        return false;
+    return function->probeActive();
 }
 
 void Functions::addProbe(int functionId)
@@ -103,15 +118,14 @@ void Functions::addProbe(int functionId)
     if (function == nullptr)
         return;
 
-    m_probes += functionId;
+    function->m_probeActive = true;
+    emit function->probeActiveChanged(true);
 
     QJsonObject payload;
     payload[QStringLiteral("id")] = function->id();
     payload[QStringLiteral("address")] = function->address();
     payload[QStringLiteral("script")] = function->probeScript();
     Router::instance()->request(QStringLiteral("function:add-probe"), payload);
-
-    select();
 }
 
 void Functions::removeProbe(int functionId)
@@ -120,13 +134,12 @@ void Functions::removeProbe(int functionId)
     if (function == nullptr)
         return;
 
-    m_probes -= functionId;
+    function->m_probeActive = false;
+    emit function->probeActiveChanged(false);
 
     QJsonObject payload;
     payload[QStringLiteral("address")] = function->address();
     Router::instance()->request(QStringLiteral("function:remove-probe"), payload);
-
-    select();
 }
 
 void Functions::updateProbe(int functionId, QString script)
@@ -137,37 +150,15 @@ void Functions::updateProbe(int functionId, QString script)
     m_updateProbeScript.finish();
     if (!success)
         return;
-    invalidate(functionId);
 
     auto function = getById(functionId);
-    if (!m_probes.contains(functionId))
+    if (!function->m_probeActive)
         return;
 
     QJsonObject payload;
     payload[QStringLiteral("address")] = function->address();
     payload[QStringLiteral("script")] = function->probeScript();
     Router::instance()->request(QStringLiteral("function:update-probe"), payload);
-}
-
-QVariant Functions::data(int i, QString roleName) const
-{
-    return TableModel::data(i, roleName);
-}
-
-QVariant Functions::data(const QModelIndex &index, int role) const
-{
-    if (role == StatusRole) {
-        return hasProbe(data(index, IdRole).toInt()) ? QStringLiteral("P") : QStringLiteral("");
-    }
-
-    return TableModel::data(index, role);
-}
-
-QHash<int, QByteArray> Functions::roleNames() const
-{
-    auto names = QHash<int, QByteArray>(TableModel::roleNames());
-    names[StatusRole] = QStringLiteral("status").toUtf8();
-    return names;
 }
 
 void Functions::addCalls(QJsonObject summary)
@@ -179,8 +170,7 @@ void Functions::addCalls(QJsonObject summary)
     emit modules->layoutAboutToBeChanged(entireModel, VerticalSortHint);
     emit layoutAboutToBeChanged(entireModel, VerticalSortHint);
 
-    auto db = database();
-    db.transaction();
+    m_database.transaction();
 
     auto it = summary.constBegin();
     auto end = summary.constEnd();
@@ -216,7 +206,7 @@ void Functions::addCalls(QJsonObject summary)
 
     modules->addCalls(moduleCalls);
 
-    db.commit();
+    m_database.commit();
 
     emit modules->layoutChanged(entireModel, VerticalSortHint);
     emit layoutChanged(entireModel, VerticalSortHint);
@@ -224,20 +214,82 @@ void Functions::addCalls(QJsonObject summary)
     importModuleExports(moduleCalls.keys());
 }
 
+int Functions::rowCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
+
+    return m_functions.size();
+}
+
+QVariant Functions::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    Q_UNUSED(section);
+    Q_UNUSED(orientation);
+
+    switch (role) {
+    case Qt::DisplayRole:
+        return QStringLiteral("Name");
+    case IdRole:
+        return QStringLiteral("Id");
+    case NameRole:
+        return QStringLiteral("Name");
+    case ModuleRole:
+        return QStringLiteral("Module");
+    case OffsetRole:
+        return QStringLiteral("Offset");
+    case ExportedRole:
+        return QStringLiteral("Exported");
+    case CallsRole:
+        return QStringLiteral("Calls");
+    case ProbeScriptRole:
+        return QStringLiteral("Probe Script");
+    case StatusRole:
+        return QStringLiteral("Status");
+    default:
+        return QVariant();
+    }
+}
+
+QVariant Functions::data(int i, QString roleName) const
+{
+    return data(index(i), m_roleNames.key(roleName.toUtf8()));
+}
+
+QVariant Functions::data(const QModelIndex &index, int role) const
+{
+    auto row = index.row();
+    if (row < 0 || row >= m_functions.size())
+        return QVariant();
+    auto function = m_functions[row];
+
+    switch (role) {
+    case Qt::DisplayRole:
+        return function->m_name;
+    case IdRole:
+        return function->m_id;
+    case NameRole:
+        return function->m_name;
+    case ModuleRole:
+        return function->m_module->id();
+    case OffsetRole:
+        return function->m_offset;
+    case ExportedRole:
+        return function->m_exported;
+    case CallsRole:
+        return function->m_calls;
+    case ProbeScriptRole:
+        return function->m_probeScript;
+    case StatusRole:
+        return function->m_probeActive ? QStringLiteral("P") : QStringLiteral("");
+    default:
+        return QVariant();
+    }
+}
+
 void Functions::addLogMessage(int functionId, QString message)
 {
     auto function = getById(functionId);
     emit logMessage(function, message);
-}
-
-void Functions::invalidate(int functionId)
-{
-    auto it = m_functionById.find(functionId);
-    if (it != m_functionById.end()) {
-        auto function = it.value();
-        m_functionById.erase(it);
-        function->deleteLater();
-    }
 }
 
 void Functions::importModuleExports(QList<int> moduleIds)
@@ -257,8 +309,7 @@ void Functions::importModuleExports(QList<int> moduleIds)
             payload[QStringLiteral("name")] = modules->getById(moduleId)->name();
             auto request = router->request(QStringLiteral("module:get-functions"), payload);
             QObject::connect(request, &Request::completed, [=] (QJsonValue result) {
-                auto db = database();
-                db.transaction();
+                m_database.transaction();
 
                 auto functions = result.toArray();
                 foreach (auto funcValue, functions) {
@@ -294,10 +345,23 @@ void Functions::importModuleExports(QList<int> moduleIds)
                     m_updateToExported.finish();
                 }
 
-                db.commit();
+                m_database.commit();
             });
         }
     }
+}
+
+Function *Functions::createFunctionFromQuery(QSqlQuery query)
+{
+    auto modules = Models::instance()->modules();
+    auto id = query.value(0).toInt();
+    auto name = query.value(1).toString();
+    auto module = modules->getById(query.value(2).toInt());
+    auto offset = query.value(3).toInt();
+    auto exported = query.value(4).toBool();
+    auto calls = query.value(5).toInt();
+    auto probeScript = query.value(6).toString();
+    return new Function(this, id, name, module, offset, exported, calls, probeScript);
 }
 
 QString Functions::functionName(Module *module, int offset)

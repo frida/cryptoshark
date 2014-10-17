@@ -182,19 +182,19 @@ QVariant Modules::headerData(int section, Qt::Orientation orientation, int role)
 
     switch (role) {
     case Qt::DisplayRole:
-        return QStringLiteral("name");
+        return QStringLiteral("Name");
     case IdRole:
-        return QStringLiteral("id");
+        return QStringLiteral("Id");
     case NameRole:
-        return QStringLiteral("name");
+        return QStringLiteral("Name");
     case PathRole:
-        return QStringLiteral("path");
+        return QStringLiteral("Path");
     case BaseRole:
-        return QStringLiteral("base");
+        return QStringLiteral("Base");
     case MainRole:
-        return QStringLiteral("main");
+        return QStringLiteral("Main");
     case CallsRole:
-        return QStringLiteral("calls");
+        return QStringLiteral("Calls");
     default:
         return QVariant();
     }
