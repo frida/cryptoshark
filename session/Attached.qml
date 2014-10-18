@@ -28,6 +28,12 @@ SplitView {
 
     onCurrentModuleChanged: {
         models.functions.load(currentModule !== null ? currentModule.id : -1);
+        functionsView.currentRow = -1;
+        functionsView.selection.clear();
+        if (currentModule !== null) {
+            functionsView.currentRow = 0;
+            functionsView.selection.select(0);
+        }
     }
 
     onCurrentFunctionChanged: {
