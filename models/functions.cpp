@@ -52,7 +52,7 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
     m_updateName.setForwardOnly(true);
     m_updateCalls.prepare(QStringLiteral("UPDATE functions SET calls = ? WHERE id = ?"));
     m_updateCalls.setForwardOnly(true);
-    m_updateProbeScript.prepare(QStringLiteral("UPDATE functions SET probe_script to ? WHERE id = ?"));
+    m_updateProbeScript.prepare(QStringLiteral("UPDATE functions SET probe_script = ? WHERE id = ?"));
     m_updateProbeScript.setForwardOnly(true);
     m_checkImportNeeded.prepare(QStringLiteral("SELECT 1 FROM functions WHERE module = ? AND exported = 1 LIMIT 1"));
     m_checkImportNeeded.setForwardOnly(true);
