@@ -10,13 +10,14 @@ Dialog {
     signal rename(var func, string oldName, string newName);
 
     onFunctionIdChanged: {
-        var f = models.functions.getById(functionId);
-        _func = {
-            id: f.id,
-            name: f.name
-        };
-        name.text = f.name;
-        script.text = f.probeScript;
+        _func = models.functions.getById(functionId);
+        if (_func !== null) {
+            name.text = _func.name;
+            script.text = _func.probeScript;
+        } else {
+            name.text = "";
+            script.text = "";
+        }
     }
 
     onAccepted: {
