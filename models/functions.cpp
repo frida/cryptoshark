@@ -40,21 +40,23 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
     m_roleNames[ProbeScriptRole] = QStringLiteral("probeScript").toUtf8();
     m_roleNames[StatusRole] = QStringLiteral("status").toUtf8();
 
-    m_getAll.prepare(QStringLiteral("SELECT * FROM functions WHERE module = ? ORDER BY calls DESC"));
+    m_getAll.prepare(QStringLiteral("SELECT * FROM functions WHERE module = ? AND calls > 0 ORDER BY calls DESC"));
     m_getAll.setForwardOnly(true);
     m_getById.prepare(QStringLiteral("SELECT * FROM functions WHERE id = ?"));
     m_getById.setForwardOnly(true);
-    m_insert.prepare(QStringLiteral("INSERT INTO functions (name, module, offset, exported, calls) VALUES (?, ?, ?, ?, ?)"));
+    m_getBySymbol.prepare(QStringLiteral("SELECT id FROM functions WHERE module = ? AND offset = ? LIMIT 1"));
+    m_getBySymbol.setForwardOnly(true);
+    m_insert.prepare(QStringLiteral("INSERT INTO functions (name, module, offset, exported) VALUES (?, ?, ?, ?)"));
     m_insert.setForwardOnly(true);
     m_updateName.prepare(QStringLiteral("UPDATE functions SET name = ? WHERE id = ?"));
     m_updateName.setForwardOnly(true);
-    m_addCalls.prepare(QStringLiteral("UPDATE functions SET calls = calls + ? WHERE module = ? AND offset = ?"));
-    m_addCalls.setForwardOnly(true);
+    m_updateCalls.prepare(QStringLiteral("UPDATE functions SET calls = ? WHERE id = ?"));
+    m_updateCalls.setForwardOnly(true);
     m_updateProbeScript.prepare(QStringLiteral("UPDATE functions SET probe_script to ? WHERE id = ?"));
     m_updateProbeScript.setForwardOnly(true);
     m_checkImportNeeded.prepare(QStringLiteral("SELECT 1 FROM functions WHERE module = ? AND exported = 1 LIMIT 1"));
     m_checkImportNeeded.setForwardOnly(true);
-    m_updateToExported.prepare(QStringLiteral("UPDATE functions SET name = ?, exported = 1 WHERE module = ? AND offset = ?"));
+    m_updateToExported.prepare(QStringLiteral("UPDATE functions SET name = ?, exported = 1 WHERE id = ?"));
     m_updateToExported.setForwardOnly(true);
 }
 
@@ -66,6 +68,7 @@ void Functions::load(int moduleId)
 
     m_getAll.addBindValue(moduleId);
     m_getAll.exec();
+    m_functions.clear();
     while (m_getAll.next()) {
         auto id = m_getAll.value(0).toInt();
         Function *function = m_functionById[id];
@@ -100,6 +103,14 @@ bool Functions::updateName(int functionId, QString name)
     m_updateName.addBindValue(name);
     m_updateName.addBindValue(functionId);
     bool success = m_updateName.exec();
+    if (success) {
+        auto function = getById(functionId);
+
+        function->m_name = name;
+        emit function->nameChanged(name);
+
+        notifyRowChange(function, NameRole);
+    }
     m_updateName.finish();
     return success;
 }
@@ -121,6 +132,8 @@ void Functions::addProbe(int functionId)
     function->m_probeActive = true;
     emit function->probeActiveChanged(true);
 
+    notifyRowChange(function, StatusRole);
+
     QJsonObject payload;
     payload[QStringLiteral("id")] = function->id();
     payload[QStringLiteral("address")] = function->address();
@@ -137,6 +150,8 @@ void Functions::removeProbe(int functionId)
     function->m_probeActive = false;
     emit function->probeActiveChanged(false);
 
+    notifyRowChange(function, StatusRole);
+
     QJsonObject payload;
     payload[QStringLiteral("address")] = function->address();
     Router::instance()->request(QStringLiteral("function:remove-probe"), payload);
@@ -152,13 +167,17 @@ void Functions::updateProbe(int functionId, QString script)
         return;
 
     auto function = getById(functionId);
-    if (!function->m_probeActive)
-        return;
+    function->m_probeScript = script;
+    emit function->probeScriptChanged(script);
 
-    QJsonObject payload;
-    payload[QStringLiteral("address")] = function->address();
-    payload[QStringLiteral("script")] = function->probeScript();
-    Router::instance()->request(QStringLiteral("function:update-probe"), payload);
+    notifyRowChange(function, ProbeScriptRole);
+
+    if (function->m_probeActive) {
+        QJsonObject payload;
+        payload[QStringLiteral("address")] = function->address();
+        payload[QStringLiteral("script")] = function->probeScript();
+        Router::instance()->request(QStringLiteral("function:update-probe"), payload);
+    }
 }
 
 void Functions::addCalls(QJsonObject summary)
@@ -166,52 +185,102 @@ void Functions::addCalls(QJsonObject summary)
     auto modules = Models::instance()->modules();
     QHash<int, int> moduleCalls;
 
-    QList<QPersistentModelIndex> entireModel;
-    emit modules->layoutAboutToBeChanged(entireModel, VerticalSortHint);
-    emit layoutAboutToBeChanged(entireModel, VerticalSortHint);
-
     m_database.transaction();
 
-    auto it = summary.constBegin();
-    auto end = summary.constEnd();
-    while (it != end) {
-        auto entry = it.value().toObject();
+    QModelIndex noParent;
+
+    auto i = summary.constBegin();
+    auto e = summary.constEnd();
+    for (; i != e; ++i) {
+        auto entry = i.value().toObject();
         auto symbolValue = entry[QStringLiteral("symbol")];
         if (!symbolValue.isNull()) {
             auto symbol = symbolValue.toObject();
             auto moduleName = symbol[QStringLiteral("module")].toString();
-            auto count = entry[QStringLiteral("count")].toInt();
-            Module *module = modules->getByName(moduleName);
-            auto moduleId = module->id();
             auto offset = symbol[QStringLiteral("offset")].toInt();
-            m_addCalls.addBindValue(count);
-            m_addCalls.addBindValue(moduleId);
-            m_addCalls.addBindValue(offset);
-            m_addCalls.exec();
-            if (m_addCalls.numRowsAffected() == 0) {
-                m_insert.addBindValue(functionName(module, offset));
-                m_insert.addBindValue(moduleId);
-                m_insert.addBindValue(offset);
-                m_insert.addBindValue(false);
-                m_insert.addBindValue(count);
-                m_insert.exec();
-                m_insert.finish();
-            }
-            m_addCalls.finish();
+            auto count = entry[QStringLiteral("count")].toInt();
 
-            moduleCalls[moduleId] += count;
+            auto symbolKey = moduleName + offset;
+            auto function = m_functionBySymbol[symbolKey];
+            if (function == nullptr) {
+                Module *module = modules->getByName(moduleName);
+                auto moduleId = module->id();
+                m_getBySymbol.addBindValue(moduleId);
+                m_getBySymbol.addBindValue(offset);
+                m_getBySymbol.exec();
+                if (m_getBySymbol.next()) {
+                    function = getById(m_getBySymbol.value(0).toInt());
+                } else {
+                    auto name = functionName(module, offset);
+                    bool exported = false;
+                    m_insert.addBindValue(name);
+                    m_insert.addBindValue(moduleId);
+                    m_insert.addBindValue(offset);
+                    m_insert.addBindValue(exported);
+                    m_insert.exec();
+                    auto id = m_insert.lastInsertId().toInt();
+                    m_insert.finish();
+
+                    function = getById(id);
+                }
+                m_getBySymbol.finish();
+
+                m_functionBySymbol[symbolKey] = function;
+            }
+
+            auto calls = function->m_calls + count;
+
+            m_updateCalls.addBindValue(calls);
+            m_updateCalls.addBindValue(function->m_id);
+            m_updateCalls.exec();
+            m_updateCalls.finish();
+
+            function->m_calls = calls;
+            emit function->callsChanged(calls);
+
+            if (function->module()->id() == m_currentModuleId) {
+                auto oldRow = m_functions.indexOf(function);
+                if (oldRow != -1) {
+                    auto newRow = sortedRowOffset(function, oldRow);
+
+                    emit headerDataChanged(Qt::Vertical, oldRow, oldRow);
+                    auto i = createIndex(oldRow, 0);
+                    QVector<int> roles;
+                    roles << CallsRole;
+                    emit dataChanged(i, i, roles);
+
+                    if (newRow != oldRow) {
+                        beginMoveRows(noParent, oldRow, oldRow, noParent, newRow);
+                        m_functions.move(oldRow, newRow > oldRow ? newRow - 1 : newRow);
+                        endMoveRows();
+                    }
+                } else {
+                    auto row = sortedRowOffset(function, m_functions.size());
+                    beginInsertRows(noParent, row, row);
+                    m_functions.insert(row, function);
+                    endInsertRows();
+                }
+            }
+
+            moduleCalls[function->module()->id()] += count;
         }
-        ++it;
     }
 
     modules->addCalls(moduleCalls);
 
     m_database.commit();
 
-    emit modules->layoutChanged(entireModel, VerticalSortHint);
-    emit layoutChanged(entireModel, VerticalSortHint);
-
     importModuleExports(moduleCalls.keys());
+}
+
+int Functions::sortedRowOffset(Function *function, int currentIndex)
+{
+    int calls = function->m_calls;
+    for (int i = currentIndex - 1; i >= 0; i--) {
+        if (m_functions[i]->m_calls > calls)
+            return i + 1;
+    }
+    return 0;
 }
 
 int Functions::rowCount(const QModelIndex &parent) const
@@ -252,7 +321,7 @@ QVariant Functions::headerData(int section, Qt::Orientation orientation, int rol
 
 QVariant Functions::data(int i, QString roleName) const
 {
-    return data(index(i), m_roleNames.key(roleName.toUtf8()));
+    return data(createIndex(i, 0), m_roleNames.key(roleName.toUtf8()));
 }
 
 QVariant Functions::data(const QModelIndex &index, int role) const
@@ -316,33 +385,53 @@ void Functions::importModuleExports(QList<int> moduleIds)
                     auto func = funcValue.toArray();
                     auto name = func.at(0).toString();
                     auto offset = func.at(1).toInt();
-                    m_updateToExported.addBindValue(name);
-                    m_updateToExported.addBindValue(moduleId);
-                    m_updateToExported.addBindValue(offset);
-                    int retry = 2;
-                    while (!m_updateToExported.exec()) {
+
+                    m_getBySymbol.addBindValue(moduleId);
+                    m_getBySymbol.addBindValue(offset);
+                    m_getBySymbol.exec();
+                    if (m_getBySymbol.next()) {
+                        auto functionId = m_getBySymbol.value(0).toInt();
+                        auto function = getById(functionId);
+
+                        auto newName = name;
+                        m_updateToExported.addBindValue(newName);
+                        m_updateToExported.addBindValue(functionId);
+                        int retry = 2;
+                        while (!m_updateToExported.exec()) {
+                            m_updateToExported.finish();
+                            newName = name + QString::number(retry++);
+                            m_updateToExported.addBindValue(newName);
+                            m_updateToExported.addBindValue(functionId);
+                        }
                         m_updateToExported.finish();
-                        m_updateToExported.addBindValue(name + QString::number(retry++));
-                        m_updateToExported.addBindValue(moduleId);
-                        m_updateToExported.addBindValue(offset);
-                    }
-                    if (m_updateToExported.numRowsAffected() == 0) {
+
+                        function->m_name = newName;
+                        emit function->nameChanged(newName);
+
+                        function->m_exported = true;
+                        emit function->exportedChanged(true);
+
+                        QVector<int> roles;
+                        roles << NameRole;
+                        roles << ExportedRole;
+                        notifyRowChange(function, roles);
+                    } else {
+                        bool exported = true;
                         m_insert.addBindValue(name);
                         m_insert.addBindValue(moduleId);
                         m_insert.addBindValue(offset);
-                        m_insert.addBindValue(true);
-                        m_insert.addBindValue(0);
+                        m_insert.addBindValue(exported);
+                        int retry = 2;
                         while (!m_insert.exec()) {
                             m_insert.finish();
                             m_insert.addBindValue(name + QString::number(retry++));
                             m_insert.addBindValue(moduleId);
                             m_insert.addBindValue(offset);
-                            m_insert.addBindValue(true);
-                            m_insert.addBindValue(0);
+                            m_insert.addBindValue(exported);
                         }
                         m_insert.finish();
                     }
-                    m_updateToExported.finish();
+                    m_getBySymbol.finish();
                 }
 
                 m_database.commit();
@@ -362,6 +451,26 @@ Function *Functions::createFunctionFromQuery(QSqlQuery query)
     auto calls = query.value(5).toInt();
     auto probeScript = query.value(6).toString();
     return new Function(this, id, name, module, offset, exported, calls, probeScript);
+}
+
+void Functions::notifyRowChange(Function *function, int role)
+{
+    QVector<int> roles;
+    roles << role;
+    notifyRowChange(function, roles);
+}
+
+void Functions::notifyRowChange(Function *function, QVector<int> roles)
+{
+    if (function->module()->id() != m_currentModuleId) {
+        return;
+    }
+
+    auto row = m_functions.indexOf(function);
+    if (row != -1) {
+        auto i = createIndex(row, 0);
+        emit dataChanged(i, i, roles);
+    }
 }
 
 QString Functions::functionName(Module *module, int offset)

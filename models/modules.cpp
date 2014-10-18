@@ -92,7 +92,7 @@ void Modules::update(QJsonArray modules)
             emit module->baseChanged(base);
 
             if (notifyView) {
-                auto i = index(m_modules.indexOf(module));
+                auto i = createIndex(m_modules.indexOf(module), 1);
                 QVector<int> roles;
                 roles << PathRole;
                 roles << BaseRole;
@@ -118,6 +118,8 @@ void Modules::update(QJsonArray modules)
 
 void Modules::addCalls(QHash<int, int> calls)
 {
+    QModelIndex noParent;
+
     auto i = calls.constBegin();
     auto e = calls.constEnd();
     for (; i != e; ++i) {
@@ -133,32 +135,31 @@ void Modules::addCalls(QHash<int, int> calls)
         module->m_calls += count;
         emit module->callsChanged(module->m_calls);
 
-        QModelIndex noParent;
         if (alreadyInserted) {
-            auto oldIndex = m_modules.indexOf(module);
-            auto newIndex = sortedIndex(module, oldIndex);
+            auto oldRow = m_modules.indexOf(module);
+            auto newRow = sortedRowOffset(module, oldRow);
 
-            emit headerDataChanged(Qt::Vertical, oldIndex, oldIndex);
-            auto i = createIndex(oldIndex, 0);
+            emit headerDataChanged(Qt::Vertical, oldRow, oldRow);
+            auto i = createIndex(oldRow, 0);
             QVector<int> roles;
             roles << CallsRole;
             emit dataChanged(i, i, roles);
 
-            if (newIndex != oldIndex) {
-                beginMoveRows(noParent, oldIndex, oldIndex, noParent, newIndex);
-                m_modules.move(oldIndex, newIndex > oldIndex ? newIndex - 1 : newIndex);
+            if (newRow != oldRow) {
+                beginMoveRows(noParent, oldRow, oldRow, noParent, newRow);
+                m_modules.move(oldRow, newRow > oldRow ? newRow - 1 : newRow);
                 endMoveRows();
             }
         } else {
-            auto index = sortedIndex(module, m_modules.size());
-            beginInsertRows(noParent, index, index);
-            m_modules.insert(index, module);
+            auto row = sortedRowOffset(module, m_modules.size());
+            beginInsertRows(noParent, row, row);
+            m_modules.insert(row, module);
             endInsertRows();
         }
     }
 }
 
-int Modules::sortedIndex(Module *module, int currentIndex)
+int Modules::sortedRowOffset(Module *module, int currentIndex)
 {
     int calls = module->m_calls;
     for (int i = currentIndex - 1; i >= 0; i--) {
@@ -202,7 +203,7 @@ QVariant Modules::headerData(int section, Qt::Orientation orientation, int role)
 
 QVariant Modules::data(int i, QString roleName) const
 {
-    return data(index(i), m_roleNames.key(roleName.toUtf8()));
+    return data(createIndex(i, 0), m_roleNames.key(roleName.toUtf8()));
 }
 
 QVariant Modules::data(const QModelIndex &index, int role) const

@@ -44,22 +44,27 @@ signals:
     void logMessage(Function *function, QString message);
 
 private:
+    int sortedRowOffset(Function *function, int currentIndex);
     void importModuleExports(QList<int> moduleIds);
     Function *createFunctionFromQuery(QSqlQuery query);
+    void notifyRowChange(Function *function, int role);
+    void notifyRowChange(Function *function, QVector<int> roles);
     static QString functionName(Module *module, int offset);
     static QString functionPrefix(Module *module);
 
     int m_currentModuleId;
     QList<Function *> m_functions;
     QHash<int, Function *> m_functionById;
+    QHash<QString, Function *> m_functionBySymbol;
     QSet<int> m_importedModules;
     QHash<int, QByteArray> m_roleNames;
     QSqlDatabase m_database;
     QSqlQuery m_getAll;
     QSqlQuery m_getById;
+    QSqlQuery m_getBySymbol;
     QSqlQuery m_insert;
     QSqlQuery m_updateName;
-    QSqlQuery m_addCalls;
+    QSqlQuery m_updateCalls;
     QSqlQuery m_updateProbeScript;
     QSqlQuery m_checkImportNeeded;
     QSqlQuery m_updateToExported;
