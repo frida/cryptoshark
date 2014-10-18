@@ -18,8 +18,6 @@ SplitView {
     property var currentModule: null
     property var currentFunction: null
 
-    property var _functionsObservable: null
-
     function dispose() {
         log.dispose();
         modulesView.dispose();
@@ -94,11 +92,7 @@ SplitView {
                     var currentId = model.data(currentRow, 'id') || null;
                     if (currentId !== null) {
                         if (currentModule === null || currentModule.id !== currentId) {
-                            currentModule = {
-                                id: model.data(currentRow, 'id'),
-                                name: model.data(currentRow, 'name'),
-                                base: model.data(currentRow, 'base')
-                            };
+                            currentModule = model.getById(currentId);
                         }
                     } else if (currentModule !== null) {
                         currentModule = null;
@@ -119,12 +113,7 @@ SplitView {
                     if (currentId !== null) {
                         if (currentFunction === null || currentFunction.id !== currentId) {
                             var id = model.data(currentRow, 'id');
-                            currentFunction = {
-                                id: id,
-                                name: model.data(currentRow, 'name'),
-                                address: NativePointer.fromBaseAndOffset(currentModule.base, model.data(currentRow, 'offset')),
-                                hasProbe: model.hasProbe(id)
-                            };
+                            currentFunction = model.getById(currentId);
                         }
                     } else if (currentFunction !== null) {
                         currentFunction = null;
@@ -148,7 +137,7 @@ SplitView {
                 Layout.fillWidth: true
 
                 Button {
-                    property string _action: !!currentFunction && currentFunction.hasProbe ? 'remove' : 'add'
+                    property string _action: !!currentFunction && currentFunction.probeActive ? 'remove' : 'add'
                     text: _action === 'add' ? qsTr("Add Probe") : qsTr("Remove Probe")
                     enabled: !!currentFunction
                     onClicked: {
@@ -157,12 +146,6 @@ SplitView {
                         } else {
                             models.functions.removeProbe(currentFunction.id);
                         }
-                        currentFunction = {
-                            id: currentFunction.id,
-                            name: currentFunction.name,
-                            address: currentFunction.address,
-                            hasProbe: models.functions.hasProbe(currentFunction.id)
-                        };
                     }
                 }
             }
