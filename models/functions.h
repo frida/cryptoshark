@@ -26,7 +26,6 @@ public:
     Q_INVOKABLE Function *getById(int id);
     Q_INVOKABLE bool updateName(int functionId, QString name);
 
-    Q_INVOKABLE bool hasProbe(int functionId);
     Q_INVOKABLE void addProbe(int functionId);
     Q_INVOKABLE void removeProbe(int functionId);
     Q_INVOKABLE void updateProbe(int functionId, QString script);

@@ -115,14 +115,6 @@ bool Functions::updateName(int functionId, QString name)
     return success;
 }
 
-bool Functions::hasProbe(int functionId)
-{
-    auto function = getById(functionId);
-    if (function == nullptr)
-        return false;
-    return function->probeActive();
-}
-
 void Functions::addProbe(int functionId)
 {
     auto function = getById(functionId);
