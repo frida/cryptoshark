@@ -195,7 +195,7 @@ SplitView {
 
             function _onLogMessage(func, message) {
                 var lengthBefore = length;
-                append("<font color=\"#ffffff\"><a href=\"" + func.address + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
+                append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
                 var lengthAfter = length;
                 var lineLength = lengthAfter - lengthBefore;
                 _lineLengths.push(lineLength);
@@ -210,7 +210,7 @@ SplitView {
             }
 
             onLinkActivated: {
-                functionDialog.functionId = link;
+                functionDialog.functionId = parseInt(link, 10);
                 functionDialog.open();
             }
 
