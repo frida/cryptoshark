@@ -29,7 +29,7 @@ public:
     Q_INVOKABLE QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
 
 private:
-    int sortedRowOffset(Module *module, int currentIndex);
+    void sortByCallsDescending();
 
     QList<Module *> m_modules;
     QHash<int, Module *> m_moduleById;

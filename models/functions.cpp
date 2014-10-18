@@ -187,10 +187,10 @@ void Functions::addCalls(QJsonObject summary)
 
     m_database.transaction();
 
-    QModelIndex noParent;
-
+    bool sortNeeded = false;
     auto i = summary.constBegin();
     auto e = summary.constEnd();
+    QModelIndex noParent;
     for (; i != e; ++i) {
         auto entry = i.value().toObject();
         auto symbolValue = entry[QStringLiteral("symbol")];
@@ -239,32 +239,29 @@ void Functions::addCalls(QJsonObject summary)
             emit function->callsChanged(calls);
 
             if (function->module()->id() == m_currentModuleId) {
-                auto oldRow = m_functions.indexOf(function);
-                if (oldRow != -1) {
-                    auto newRow = sortedRowOffset(function, oldRow);
-
-                    emit headerDataChanged(Qt::Vertical, oldRow, oldRow);
-                    auto i = createIndex(oldRow, 0);
+                auto row = m_functions.indexOf(function);
+                if (row != -1) {
+                    emit headerDataChanged(Qt::Vertical, row, row);
+                    auto i = index(row, 0);
                     QVector<int> roles;
                     roles << CallsRole;
                     emit dataChanged(i, i, roles);
-
-                    if (newRow != oldRow) {
-                        beginMoveRows(noParent, oldRow, oldRow, noParent, newRow);
-                        m_functions.move(oldRow, oldRow < newRow ? newRow - 1 : newRow);
-                        endMoveRows();
-                    }
                 } else {
-                    auto row = sortedRowOffset(function, m_functions.size());
+                    row = m_functions.size();
                     beginInsertRows(noParent, row, row);
-                    m_functions.insert(row, function);
+                    m_functions.append(function);
                     endInsertRows();
                 }
+
+                sortNeeded = true;
             }
 
             moduleCalls[function->module()->id()] += count;
         }
     }
+
+    if (sortNeeded)
+        sortByCallsDescending();
 
     modules->addCalls(moduleCalls);
 
@@ -273,14 +270,36 @@ void Functions::addCalls(QJsonObject summary)
     importModuleExports(moduleCalls.keys());
 }
 
-int Functions::sortedRowOffset(Function *function, int currentIndex)
+static bool descendingLessThanByCalls(const QPair<Function *, int> &m1, const QPair<Function *, int> &m2)
 {
-    int calls = function->m_calls;
-    for (int i = currentIndex - 1; i >= 0; i--) {
-        if (m_functions[i]->m_calls > calls)
-            return i + 1;
+    return m1.first->calls() > m2.first->calls();
+}
+
+void Functions::sortByCallsDescending()
+{
+    QList<QPersistentModelIndex> allParents;
+    emit layoutAboutToBeChanged(allParents, VerticalSortHint);
+
+    QList<QPair<Function *, int>> functions;
+    for (int i = 0; i != m_functions.count(); i++)
+        functions.append(QPair<Function *, int>(m_functions.at(i), i));
+
+    std::sort(functions.begin(), functions.end(), descendingLessThanByCalls);
+
+    m_functions.clear();
+    QVector<int> forwarding(functions.count());
+    for (int i = 0; i != functions.count(); i++) {
+        m_functions.append(functions.at(i).first);
+        forwarding[functions.at(i).second] = i;
     }
-    return 0;
+
+    QModelIndexList oldList = persistentIndexList();
+    QModelIndexList newList;
+    for (int i = 0; i != oldList.count(); i++)
+        newList.append(index(forwarding.at(oldList.at(i).row()), 0));
+    changePersistentIndexList(oldList, newList);
+
+    emit layoutChanged(allParents, VerticalSortHint);
 }
 
 int Functions::rowCount(const QModelIndex &parent) const
@@ -321,7 +340,7 @@ QVariant Functions::headerData(int section, Qt::Orientation orientation, int rol
 
 QVariant Functions::data(int i, QString roleName) const
 {
-    return data(createIndex(i, 0), m_roleNames.key(roleName.toUtf8()));
+    return data(index(i), m_roleNames.key(roleName.toUtf8()));
 }
 
 QVariant Functions::data(const QModelIndex &index, int role) const
@@ -468,7 +487,7 @@ void Functions::notifyRowChange(Function *function, QVector<int> roles)
 
     auto row = m_functions.indexOf(function);
     if (row != -1) {
-        auto i = createIndex(row, 0);
+        auto i = index(row);
         emit dataChanged(i, i, roles);
     }
 }

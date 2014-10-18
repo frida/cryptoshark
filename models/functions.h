@@ -44,7 +44,7 @@ signals:
     void logMessage(Function *function, QString message);
 
 private:
-    int sortedRowOffset(Function *function, int currentIndex);
+    void sortByCallsDescending();
     void importModuleExports(QList<int> moduleIds);
     Function *createFunctionFromQuery(QSqlQuery query);
     void notifyRowChange(Function *function, int role);
