@@ -147,7 +147,7 @@ void Modules::addCalls(QHash<int, int> calls)
 
             if (newRow != oldRow) {
                 beginMoveRows(noParent, oldRow, oldRow, noParent, newRow);
-                m_modules.move(oldRow, newRow > oldRow ? newRow - 1 : newRow);
+                m_modules.move(oldRow, oldRow < newRow ? newRow - 1 : newRow);
                 endMoveRows();
             }
         } else {

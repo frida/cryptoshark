@@ -251,7 +251,7 @@ void Functions::addCalls(QJsonObject summary)
 
                     if (newRow != oldRow) {
                         beginMoveRows(noParent, oldRow, oldRow, noParent, newRow);
-                        m_functions.move(oldRow, newRow > oldRow ? newRow - 1 : newRow);
+                        m_functions.move(oldRow, oldRow < newRow ? newRow - 1 : newRow);
                         endMoveRows();
                     }
                 } else {
