@@ -1,15 +1,33 @@
+#include "models.h"
 #include "nativepointer.h"
+#include "router.h"
 
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QtQml>
+
+static QObject *createRouterSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
+{
+    Q_UNUSED(engine);
+    Q_UNUSED(scriptEngine);
+
+    return Router::instance();
+}
+
+static QObject *createModelsSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
+{
+    Q_UNUSED(engine);
+    Q_UNUSED(scriptEngine);
+
+    return Models::instance();
+}
 
 static QObject *createNativePointerSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
     Q_UNUSED(engine);
     Q_UNUSED(scriptEngine);
 
-    return new NativePointer();
+    return NativePointer::instance();
 }
 
 int main(int argc, char *argv[])
@@ -19,6 +37,13 @@ int main(int argc, char *argv[])
 #endif
     QApplication app(argc, argv);
 
+    qRegisterMetaType<Modules *>("Modules *");
+    qRegisterMetaType<Module *>("Module *");
+    qRegisterMetaType<Functions *>("Functions *");
+    qRegisterMetaType<Function *>("Function *");
+
+    qmlRegisterSingletonType<NativePointer>("CryptoShark", 1, 0, "Router", createRouterSingleton);
+    qmlRegisterSingletonType<NativePointer>("CryptoShark", 1, 0, "Models", createModelsSingleton);
     qmlRegisterSingletonType<NativePointer>("CryptoShark", 1, 0, "NativePointer", createNativePointerSingleton);
 
     QQmlApplicationEngine engine;

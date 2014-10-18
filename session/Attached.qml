@@ -1,3 +1,5 @@
+import CryptoShark 1.0
+
 import QtQuick 2.0
 import QtQuick.Controls 1.2
 import QtQuick.Controls.Styles 1.1
@@ -16,8 +18,6 @@ SplitView {
     property var currentModule: null
     property var currentFunction: null
 
-    property var _functionsObservable: null
-
     function dispose() {
         log.dispose();
         modulesView.dispose();
@@ -25,7 +25,13 @@ SplitView {
     }
 
     onCurrentModuleChanged: {
-        _updateFunctionsObservable(currentModule ? models.functions.allInModule(currentModule) : null);
+        models.functions.load(currentModule !== null ? currentModule.id : -1);
+        functionsView.currentRow = -1;
+        functionsView.selection.clear();
+        if (currentModule !== null) {
+            functionsView.currentRow = 0;
+            functionsView.selection.select(0);
+        }
     }
 
     onCurrentFunctionChanged: {
@@ -37,85 +43,7 @@ SplitView {
         }
     }
 
-    function _updateFunctionsObservable(observable) {
-        if (_functionsObservable) {
-            _functionsObservable.removeObserver(functions);
-            _functionsObservable = null;
-        }
-        _functionsObservable = observable;
-        if (_functionsObservable) {
-            _functionsObservable.addObserver(functions);
-            if (functions.count > 0) {
-                functionsView.currentRow = 0;
-                functionsView.selection.clear();
-                functionsView.selection.select(0);
-                currentFunction = _functionsObservable.items[0];
-            } else {
-                functionsView.currentRow = -1;
-                functionsView.selection.clear();
-                currentFunction = null;
-            }
-        }
-    }
-
     orientation: Qt.Horizontal
-
-    ListModel {
-        id: functions
-
-        function addProbe(func) {
-            agentService.addProbe(func.address, func.probe.script, function (id) {
-                models.functions.updateProbeId(func, id);
-            });
-        }
-
-        function removeProbe(func) {
-            agentService.removeProbe(func.address, function (id) {
-                models.functions.updateProbeId(func, -1);
-            });
-        }
-
-        function onFunctionsUpdate(items, partialUpdate) {
-            if (partialUpdate) {
-                var index = partialUpdate[0];
-                var func = items[index];
-                var property = partialUpdate[1];
-                var value = partialUpdate[2];
-                if (property === 'name' || property === 'calls') {
-                    setProperty(index, property, value);
-                } else if (property === 'probe.id') {
-                    setProperty(index, 'status', value !== -1 ? 'P' : '');
-                } else if (property === 'probe.script') {
-                    agentService.updateProbe(func.address, value);
-                }
-
-                if (currentFunction && func.id === currentFunction.id) {
-                    currentFunction = func;
-                }
-            } else {
-                clear();
-                for (var i = 0; i !== items.length; i++) {
-                    append(modelObject(items[i]));
-                }
-            }
-        }
-
-        function onFunctionsAdd(index, func) {
-            insert(index, modelObject(func));
-        }
-
-        function onFunctionsMove(oldIndex, newIndex) {
-            move(oldIndex, newIndex, 1);
-        }
-
-        function modelObject(func) {
-            return {
-                name: func.name,
-                calls: func.calls,
-                status: func.probe.id !== -1 ? 'P' : ''
-            };
-        }
-    }
 
     Item {
         width: sidebar.implicitWidth
@@ -157,76 +85,47 @@ SplitView {
                     }
                 }
             }
-            ComboBox {
+            TableView {
                 id: modulesView
 
-                property var observable: null
-                property bool _updating: false
-
-                Component.onCompleted: {
-                    observable = models.modules.allWithCalls();
-                    observable.addObserver(this);
-                }
-
-                function dispose() {
-                    observable.removeObserver(this);
-                }
-
-                function onModulesUpdate(items) {
-                    var selectedModuleId = currentModule ? currentModule.id : null;
-                    _updating = true;
-                    model = items;
-                    var selectedModuleValid = false;
-                    if (selectedModuleId) {
-                        for (var i = 0; i !== items.length; i++) {
-                            var module = items[i];
-                            if (module.id === selectedModuleId) {
-                                if (!currentModule || currentModule.id !== selectedModuleId) {
-                                    currentModule = module;
-                                }
-                                currentIndex = i;
-                                selectedModuleValid = true;
-                                break;
-                            }
+                onCurrentRowChanged: {
+                    var currentId = model.data(currentRow, 'id') || null;
+                    if (currentId !== null) {
+                        if (currentModule === null || currentModule.id !== currentId) {
+                            currentModule = model.getById(currentId);
                         }
-                    }
-                    if (!selectedModuleValid) {
-                        var firstModule = model[0] || null;
-                        if (currentModule !== firstModule) {
-                            currentModule = firstModule;
-                        }
-                        currentIndex = currentModule ? 0 : -1;
-                    }
-                    _updating = false;
-                }
-
-                onCurrentIndexChanged: {
-                    if (_updating) {
-                        return;
-                    }
-
-                    var current = model[currentIndex] || null;
-                    if (currentModule !== current) {
-                        currentModule = current;
+                    } else if (currentModule !== null) {
+                        currentModule = null;
                     }
                 }
 
-                model: []
-                textRole: 'name'
+                model: models.modules
+                Layout.fillWidth: true
+
+                TableViewColumn { role: "name"; title: "Module"; width: 83 }
+                TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
             }
             TableView {
                 id: functionsView
 
                 onCurrentRowChanged: {
-                    currentFunction = _functionsObservable.items[currentRow] || null;
+                    var currentId = model.data(currentRow, 'id') || null;
+                    if (currentId !== null) {
+                        if (currentFunction === null || currentFunction.id !== currentId) {
+                            var id = model.data(currentRow, 'id');
+                            currentFunction = model.getById(currentId);
+                        }
+                    } else if (currentFunction !== null) {
+                        currentFunction = null;
+                    }
                 }
 
                 onActivated: {
-                    functionDialog.address = currentFunction.address;
+                    functionDialog.functionId = currentFunction.id;
                     functionDialog.open();
                 }
 
-                model: functions
+                model: models.functions
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
@@ -238,14 +137,14 @@ SplitView {
                 Layout.fillWidth: true
 
                 Button {
-                    property string _action: !!currentFunction && currentFunction.probe.id !== -1 ? 'remove' : 'add'
+                    property string _action: !!currentFunction && currentFunction.probeActive ? 'remove' : 'add'
                     text: _action === 'add' ? qsTr("Add Probe") : qsTr("Remove Probe")
                     enabled: !!currentFunction
                     onClicked: {
                         if (_action === 'add') {
-                            functions.addProbe(currentFunction);
+                            models.functions.addProbe(currentFunction.id);
                         } else {
-                            functions.removeProbe(currentFunction);
+                            models.functions.removeProbe(currentFunction.id);
                         }
                     }
                 }
@@ -268,18 +167,18 @@ SplitView {
             property var _lineLengths: []
 
             Component.onCompleted: {
-                models.functions.addLogHandler(_onLogMessage);
+                models.functions.logMessage.connect(_onLogMessage);
                 functionDialog.rename.connect(_onRename);
             }
 
             function dispose() {
                 functionDialog.rename.disconnect(_onRename);
-                models.functions.removeLogHandler(_onLogMessage);
+                models.functions.logMessage.disconnect(_onLogMessage);
             }
 
             function _onLogMessage(func, message) {
                 var lengthBefore = length;
-                append("<font color=\"#ffffff\"><a href=\"" + func.address + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
+                append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
                 var lengthAfter = length;
                 var lineLength = lengthAfter - lengthBefore;
                 _lineLengths.push(lineLength);
@@ -290,11 +189,11 @@ SplitView {
             }
 
             function _onRename(func, oldName, newName) {
-                text = text.replace(new RegExp("(<a href=\"" + func.address + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
+                text = text.replace(new RegExp("(<a href=\"" + func.id + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
             }
 
             onLinkActivated: {
-                functionDialog.address = link;
+                functionDialog.functionId = parseInt(link, 10);
                 functionDialog.open();
             }
 

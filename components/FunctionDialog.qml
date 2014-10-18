@@ -5,14 +5,19 @@ import QtQuick.Layouts 1.1
 
 Dialog {
     property var models: null
-    property string address: ""
+    property int functionId: -1
     property var _func: null
     signal rename(var func, string oldName, string newName);
 
-    onAddressChanged: {
-        _func = models.functions.getByAddress(address);
-        name.text = _func.name;
-        script.text = _func.probe.script;
+    onFunctionIdChanged: {
+        _func = models.functions.getById(functionId);
+        if (_func !== null) {
+            name.text = _func.name;
+            script.text = _func.probeScript;
+        } else {
+            name.text = "";
+            script.text = "";
+        }
     }
 
     onAccepted: {
@@ -21,19 +26,14 @@ Dialog {
         if (newName !== oldName) {
             var suffix = "";
             var count = 2;
-            while (true) {
-                try {
-                    models.functions.updateName(_func, newName + suffix);
-                    rename(_func, oldName, newName);
-                    break;
-                } catch (e) {
-                    suffix = "_" + count;
-                    count++;
-                }
+            while (!models.functions.updateName(_func.id, newName + suffix)) {
+                suffix = "_" + count;
+                count++;
             }
+            rename(_func, oldName, newName);
         }
 
-        models.functions.updateProbeScript(_func, script.text);
+        models.functions.updateProbe(_func.id, script.text);
     }
 
     width: 564
