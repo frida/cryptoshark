@@ -1,7 +1,7 @@
 #include "functions.h"
 
-#include "models.h"
-#include "router.h"
+#include "../models.h"
+#include "../router.h"
 
 static const int IdRole = Qt::UserRole + 0;
 static const int NameRole = Qt::UserRole + 1;
@@ -19,16 +19,16 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
     m_currentModuleId(-1),
     m_database(db)
 {
-    db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS functions ("
-        "id INTEGER PRIMARY KEY, "
-        "name TEXT NOT NULL UNIQUE, "
-        "module INTEGER, "
-        "offset INTEGER NOT NULL, "
-        "exported INTEGER NOT NULL DEFAULT 0, "
-        "calls INTEGER NOT NULL DEFAULT 0, "
-        "probe_script TEXT NOT NULL DEFAULT 'log(args[0], args[1], args[2], args[3]);', "
-        "FOREIGN KEY(module) REFERENCES modules(id)"
-    ")"));
+    db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS functions ( \
+        id INTEGER PRIMARY KEY, \
+        name TEXT NOT NULL UNIQUE, \
+        module INTEGER, \
+        offset INTEGER NOT NULL, \
+        exported INTEGER NOT NULL DEFAULT 0, \
+        calls INTEGER NOT NULL DEFAULT 0, \
+        probe_script TEXT NOT NULL DEFAULT 'log(args[0], args[1], args[2], args[3]);', \
+        FOREIGN KEY(module) REFERENCES modules(id) \
+    )"));
     db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS functions_index ON functions(module, offset, calls, exported)"));
 
     m_roleNames[IdRole] = QStringLiteral("id").toUtf8();

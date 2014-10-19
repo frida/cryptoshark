@@ -1,5 +1,6 @@
 #include "models.h"
 
+#include <QCoreApplication>
 #include <QDir>
 
 Models *Models::s_instance = nullptr;

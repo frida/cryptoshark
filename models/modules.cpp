@@ -13,14 +13,14 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
     QAbstractListModel(parent),
     m_database(db)
 {
-    db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS modules ("
-        "id INTEGER PRIMARY KEY, "
-        "name TEXT NOT NULL UNIQUE, "
-        "path TEXT NOT NULL UNIQUE, "
-        "base INTEGER NOT NULL, "
-        "main INTEGER NOT NULL, "
-        "calls INTEGER NOT NULL DEFAULT 0"
-    ")"));
+    db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS modules ( \
+        id INTEGER PRIMARY KEY, \
+        name TEXT NOT NULL UNIQUE, \
+        path TEXT NOT NULL UNIQUE, \
+        base INTEGER NOT NULL, \
+        main INTEGER NOT NULL, \
+        calls INTEGER NOT NULL DEFAULT 0 \
+    )"));
     db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS modules_index ON modules(calls)"));
 
     QSqlQuery all(QStringLiteral("SELECT * FROM modules ORDER BY calls DESC"), db);
