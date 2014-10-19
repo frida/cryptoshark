@@ -20,8 +20,6 @@ SplitView {
 
     function dispose() {
         log.dispose();
-        modulesView.dispose();
-        _updateFunctionsObservable(null);
     }
 
     onCurrentModuleChanged: {
