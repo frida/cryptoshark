@@ -22,6 +22,7 @@ QML_IMPORT_PATH =
 
 QMAKE_INFO_PLIST = Info.plist
 
+win32:RC_ICONS = images/icon.ico
 macx:ICON = images/icon.icns
 
 # Default rules for deployment.
