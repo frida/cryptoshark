@@ -22,6 +22,8 @@ QML_IMPORT_PATH =
 
 QMAKE_INFO_PLIST = Info.plist
 
+macx:ICON = images/icon.icns
+
 # Default rules for deployment.
 include(deployment.pri)
 
