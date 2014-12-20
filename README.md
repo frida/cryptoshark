@@ -39,7 +39,8 @@ This is the blob of JavaScript that CryptoShark injects into target processes.
 
 - Install [Qt 5.3.1](http://qt-project.org/downloads) or newer. (For now
   do not use their online installer, as it's still at 5.3.0, which has some
-  rendering bugs.)
+  rendering bugs.) Debian users can install the following packages: 
+  `qt5-qmake qt5-default libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick-dialogs`
 
 - Grab the latest frida-qml binaries from [here](http://build.frida.re/frida/).
   For example: http://build.frida.re/frida/mac/lib/qt5/qml/Frida/
