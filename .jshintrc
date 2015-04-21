@@ -5,6 +5,7 @@
     "globals": {
         "Instruction": false,
         "Interceptor": false,
+        "Memory": false,
         "Module": false,
         "Possible": false,
         "Process": false,
