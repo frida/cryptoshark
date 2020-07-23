@@ -11,7 +11,7 @@ class Module;
 class Modules : public QAbstractListModel
 {
     Q_OBJECT
-    Q_DISABLE_COPY(Modules)
+    Q_DISABLE_COPY_MOVE(Modules)
 
 public:
     explicit Modules(QObject *parent = 0,
@@ -44,7 +44,7 @@ private:
 class Module : public QObject
 {
     Q_OBJECT
-    Q_DISABLE_COPY(Module)
+    Q_DISABLE_COPY_MOVE(Module)
 
     Q_PROPERTY(int id READ id CONSTANT)
     Q_PROPERTY(QString name READ name CONSTANT)

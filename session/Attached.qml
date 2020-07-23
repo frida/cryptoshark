@@ -35,7 +35,12 @@ SplitView {
     onCurrentFunctionChanged: {
         var func = currentFunction;
         if (func) {
-            agentService.disassemble(func.address, function (instructions) {
+            agentService.disassemble(func.address, function (error, instructions) {
+                if (error !== null) {
+                    console.error("Oops:", error);
+                    return;
+                }
+
                 disassembly.render(instructions);
             });
         }

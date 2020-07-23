@@ -7,12 +7,13 @@
 #include <QObject>
 
 class Request;
+class RequestError;
 class ScriptInstance;
 
 class Router : public QObject
 {
     Q_OBJECT
-    Q_DISABLE_COPY(Router)
+    Q_DISABLE_COPY_MOVE(Router)
 
 public:
     explicit Router(QObject *parent = 0);
@@ -27,7 +28,7 @@ signals:
     void message(QJsonObject object);
 
 public slots:
-    void onMessage(ScriptInstance *sender, QJsonObject object, QByteArray data);
+    void onMessage(ScriptInstance *sender, QJsonObject object, QVariant data);
 
 private:
     QObject *m_agent;
@@ -41,18 +42,37 @@ private:
 class Request : public QObject
 {
     Q_OBJECT
-    Q_DISABLE_COPY(Request)
+    Q_DISABLE_COPY_MOVE(Request)
 
 public:
     Request(QObject *parent = 0);
 
 protected:
-    void complete(QJsonValue result);
+    void complete(QJsonValue result, RequestError *error);
 
 signals:
-    void completed(QJsonValue result);
+    void completed(QJsonValue result, RequestError *error);
 
     friend class Router;
+};
+
+class RequestError : public QObject
+{
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(RequestError)
+
+    Q_PROPERTY(QString message READ message CONSTANT)
+    Q_PROPERTY(QString stack READ stack CONSTANT)
+
+public:
+    RequestError(QString message, QString stack);
+
+    QString message() const { return m_message; }
+    QString stack() const { return m_stack; }
+
+private:
+    QString m_message;
+    QString m_stack;
 };
 
 #endif // ROUTER_H

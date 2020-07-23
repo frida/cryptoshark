@@ -16,23 +16,22 @@
   },
   "author": {
     "name": "Ole André Vadla Ravnås",
-    "email": "ole.andre.ravnas@tillitech.com",
-    "web": "http://www.frida.re"
+    "email": "oleavr@frida.re",
+    "web": "https://frida.re"
   },
   "license": "wxWindows Library Licence, Version 3.1",
   "readmeFilename": "README.md",
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "frida-compile index.ts -o ../agent.js -xXc",
+    "watch": "frida-compile index.ts -o ../agent.js -xXcw"
+  },
   "devDependencies": {
-    "big-integer": "^1.2.10",
-    "gulp": "^3.8.7",
-    "gulp-browserify": "^0.5.0",
-    "gulp-jshint": "^1.8.4",
-    "gulp-load-plugins": "^0.5.3",
-    "gulp-rename": "^1.2.0",
-    "gulp-util": "^3.0.0",
-    "jshint-stylish": "^0.4.0",
-    "mout": "^0.9.1"
+    "@types/frida-gum": "^16.1.0",
+    "@types/node": "^14.0.24",
+    "frida-compile": "^9.3.0"
   },
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=10.0.0"
   }
 }

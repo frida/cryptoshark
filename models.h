@@ -10,7 +10,7 @@
 class Models : public QObject
 {
     Q_OBJECT
-    Q_DISABLE_COPY(Models)
+    Q_DISABLE_COPY_MOVE(Models)
     Q_PROPERTY(Modules *modules READ modules NOTIFY modulesChanged)
     Q_PROPERTY(Functions *functions READ functions NOTIFY functionsChanged)
 

@@ -12,9 +12,7 @@ carefully injecting logging and other side-effecty code.
 
 ## Binaries
 
-- [Windows](http://build.frida.re/frida/windows/Win32-Release/bin/cryptoshark-0.1.3.exe)
-- [Mac](http://build.frida.re/frida/mac/CryptoShark-0.1.3.dmg)
-- Linux: coming soon
+Not yet available.
 
 ## Building for local development
 
@@ -22,37 +20,46 @@ carefully injecting logging and other side-effecty code.
 
 This is the blob of JavaScript that CryptoShark injects into target processes.
 
-#### Install build-time dependencies
-    npm install -g gulp
-    npm install
+#### Fetch build-time dependencies
 
-#### Build
-    gulp build
+    $ cd agent
+    $ npm install
 
-#### Lint
-    gulp lint
+This will also build `agent.js`.
+
+#### Build agent.js
+
+    $ cd agent
+    $ npm run build
 
 #### Watch while developing
-    gulp watch
+
+    $ cd agent
+    $ npm run watch
+
+Which will monitor the TypeScript source code and incrementally compile
+`agent.js`. Note that the agent is included as a resource, so remember
+to hit “Build” in Qt Creator.
 
 ### Building the application
 
-- Install [Qt 5.3.1](http://qt-project.org/downloads) or newer. (For now
-  do not use their online installer, as it's still at 5.3.0, which has some
-  rendering bugs.) Debian users can install the following packages: 
-  `qt5-qmake qt5-default libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick-dialogs`
+- Install the latest [Qt 5.x](https://www.qt.io/download-open-source).
+  Debian users can install the following packages: `qt5-qmake qt5-default
+  libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick-dialogs`
 
-- Grab the latest frida-qml binaries from [here](http://build.frida.re/frida/).
-  For example: http://build.frida.re/frida/mac/lib/qt5/qml/Frida/
-  Download the entire directory and add it to your Qt installation's `qml`
-  directory (on Mac it is typically: `~/Qt/5.3/clang_64/qml/`).
-  (Only Windows and Mac binaries available for now. For Linux you'll have to
-  build Frida yourself.)
+- Grab the latest frida-qml binaries from
+  [here](https://github.com/frida/frida/releases). Extract the tarball in your
+  Qt installation's `qml` directory – on Mac it is typically:
+  `~/Qt/5.15.0/clang_64/qml/`.
+  (We only provide macOS binaries for now. On other platforms you will have to
+  build frida-core and frida-qml yourself.)
 
 - Open `cryptoshark.pro` with Qt Creator, select the `Release` configuration
   and hit `Run`.
 
 ## Building a portable Windows binary
+
+> FIXME: This section is outdated.
 
 In order to build a portable binary we will need a static build of Qt and
 frida-qml. This is not recommended for development due to the prolonged linking

@@ -376,7 +376,7 @@ void Functions::importModuleExports(QList<int> moduleIds)
 {
     auto modules = Models::instance()->modules();
     auto router = Router::instance();
-    foreach (auto moduleId, QSet<int>::fromList(moduleIds).subtract(m_importedModules)) {
+    foreach (auto moduleId, QSet<int>(moduleIds.begin(), moduleIds.end()).subtract(m_importedModules)) {
         m_checkImportNeeded.addBindValue(moduleId);
         m_checkImportNeeded.exec();
         bool importNeeded = m_checkImportNeeded.next() == false;
@@ -388,7 +388,11 @@ void Functions::importModuleExports(QList<int> moduleIds)
             QJsonObject payload;
             payload[QStringLiteral("name")] = modules->getById(moduleId)->name();
             auto request = router->request(QStringLiteral("module:get-functions"), payload);
-            QObject::connect(request, &Request::completed, [=] (QJsonValue result) {
+            QObject::connect(request, &Request::completed, [=] (QJsonValue result, RequestError *error) {
+                if (error != nullptr) {
+                    return;
+                }
+
                 m_database.transaction();
 
                 auto functions = result.toArray();

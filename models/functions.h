@@ -15,7 +15,7 @@ class Function;
 class Functions : public QAbstractListModel
 {
     Q_OBJECT
-    Q_DISABLE_COPY(Functions)
+    Q_DISABLE_COPY_MOVE(Functions)
 
 public:
     explicit Functions(QObject *parent = 0,
@@ -73,7 +73,7 @@ private:
 class Function : public QObject
 {
     Q_OBJECT
-    Q_DISABLE_COPY(Function)
+    Q_DISABLE_COPY_MOVE(Function)
 
     Q_PROPERTY(int id READ id CONSTANT)
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)

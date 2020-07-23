@@ -32,9 +32,9 @@ void Router::attach(QObject *agent)
     m_agent = agent;
     m_postMethod = agentMeta->method(agentMeta->indexOfMethod("post(QJsonObject)"));
 
-    auto agentMessageSignal = agentMeta->method(agentMeta->indexOfSignal("message(ScriptInstance*,QJsonObject,QByteArray)"));
+    auto agentMessageSignal = agentMeta->method(agentMeta->indexOfSignal("message(ScriptInstance*,QJsonObject,QVariant)"));
     auto routerMeta = metaObject();
-    auto routerOnMessageSlot = routerMeta->method(routerMeta->indexOfSlot("onMessage(ScriptInstance*,QJsonObject,QByteArray)"));
+    auto routerOnMessageSlot = routerMeta->method(routerMeta->indexOfSlot("onMessage(ScriptInstance*,QJsonObject,QVariant)"));
     connect(agent, agentMessageSignal, this, routerOnMessageSlot);
 }
 
@@ -54,7 +54,7 @@ Request *Router::request(QString name, QJsonObject payload)
     return request;
 }
 
-void Router::onMessage(ScriptInstance *sender, QJsonObject object, QByteArray data)
+void Router::onMessage(ScriptInstance *sender, QJsonObject object, QVariant data)
 {
     Q_UNUSED(sender);
     Q_UNUSED(data);
@@ -63,35 +63,45 @@ void Router::onMessage(ScriptInstance *sender, QJsonObject object, QByteArray da
 
     if (object[QStringLiteral("type")] == QStringLiteral("send")) {
         auto stanza = object[QStringLiteral("payload")].toObject();
+        auto name = stanza[QStringLiteral("name")];
 
-        auto idValue = stanza[QStringLiteral("id")];
-        if (!idValue.isNull()) {
+        const bool isResult = name == QStringLiteral("result");
+        if (isResult || name == QStringLiteral("error")) {
+            auto idValue = stanza[QStringLiteral("id")];
             auto id = idValue.toString();
+
             auto request = m_requests[id];
             if (request != nullptr) {
                 m_requests.remove(id);
-                request->complete(stanza[QStringLiteral("payload")]);
-                handled = true;
-            }
-        }
 
-        if (!handled) {
-            auto name = stanza[QStringLiteral("name")];
-            if (name == QStringLiteral("modules:update")) {
-                Models::instance()->modules()->update(stanza[QStringLiteral("payload")].toArray());
-                handled = true;
-            } else if (name == QStringLiteral("thread:summary")) {
-                auto update = stanza[QStringLiteral("payload")].toObject();
-                auto summary = update[QStringLiteral("summary")].toObject();
-                Models::instance()->functions()->addCalls(summary);
-                handled = true;
-            } else if (name == QStringLiteral("function:log")) {
-                auto entry = stanza[QStringLiteral("payload")].toObject();
-                auto id = entry[QStringLiteral("id")].toInt();
-                auto message = entry[QStringLiteral("message")].toString();
-                Models::instance()->functions()->addLogMessage(id, message);
+                auto payload = stanza[QStringLiteral("payload")];
+
+                if (isResult) {
+                    request->complete(payload, nullptr);
+                } else {
+                    auto errorValue = payload.toObject();
+                    auto message = errorValue[QStringLiteral("message")].toString();
+                    auto stack = errorValue[QStringLiteral("stack")].toString();
+                    RequestError error(message, stack);
+                    request->complete(QJsonValue(), &error);
+                }
+
                 handled = true;
             }
+        } else if (name == QStringLiteral("modules:update")) {
+            Models::instance()->modules()->update(stanza[QStringLiteral("payload")].toArray());
+            handled = true;
+        } else if (name == QStringLiteral("thread:summary")) {
+            auto update = stanza[QStringLiteral("payload")].toObject();
+            auto summary = update[QStringLiteral("summary")].toObject();
+            Models::instance()->functions()->addCalls(summary);
+            handled = true;
+        } else if (name == QStringLiteral("function:log")) {
+            auto entry = stanza[QStringLiteral("payload")].toObject();
+            auto id = entry[QStringLiteral("id")].toInt();
+            auto message = entry[QStringLiteral("message")].toString();
+            Models::instance()->functions()->addLogMessage(id, message);
+            handled = true;
         }
     }
 
@@ -105,7 +115,13 @@ Request::Request(QObject *parent) :
     connect(this, &Request::completed, this, &Request::deleteLater);
 }
 
-void Request::complete(QJsonValue result)
+void Request::complete(QJsonValue result, RequestError *error)
 {
-    emit completed(result);
+    emit completed(result, error);
+}
+
+RequestError::RequestError(QString message, QString stack) :
+    m_message(message),
+    m_stack(stack)
+{
 }

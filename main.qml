@@ -166,6 +166,7 @@ ApplicationWindow {
     Script {
         id: agent
         url: Qt.resolvedUrl("./agent.js")
+        runtime: Script.Runtime.V8
 
         property var _requests: Object()
         property var _nextRequestId: 1
@@ -181,21 +182,42 @@ ApplicationWindow {
         }
 
         function follow(threadId, callback) {
-            _request('thread:follow', {id: threadId}, callback);
+            _request('thread:follow', { id: threadId }, callback);
         }
 
         function unfollow(threadId, callback) {
-            _request('thread:unfollow', {id: threadId}, callback);
+            _request('thread:unfollow', { id: threadId }, callback);
         }
 
         function disassemble(address, callback) {
-            _request('function:disassemble', {address: address}, callback);
+            _request('function:disassemble', { address: address }, callback);
         }
 
         function _request(name, payload, callback) {
+            if (callback === undefined) {
+                callback = _noop;
+            }
+
             var id = 'a' + _nextRequestId++;
-            _requests[id] = callback || function () {};
-            post({id: id, name: name, payload: payload});
+            _requests[id] = callback;
+            post({ id: id, name: name, payload: payload });
+        }
+
+        function _onResponse(id, type, payload) {
+            var callback = _requests[id];
+            delete _requests[id];
+
+            var result, error;
+            if (type === 'result') {
+                result = payload;
+                error = null;
+            } else {
+                result = null;
+                error = new Error(payload.message);
+                error.stack = payload.stack;
+            }
+
+            callback(error, result);
         }
 
         function _onThreadsUpdate(updatedThreads) {
@@ -219,22 +241,20 @@ ApplicationWindow {
 
         function _onMessage(object) {
             if (object.type === 'send') {
-                var id = object.payload.id;
-                if (id) {
-                    var callback = _requests[id];
-                    delete _requests[id];
-                    callback(object.payload.payload);
-                    return;
-                }
-
                 var stanza = object.payload;
+                var name = stanza.name;
                 var payload = stanza.payload;
-                switch (stanza.name) {
+
+                switch (name) {
                     case 'threads:update':
                         _onThreadsUpdate(payload);
                         break;
                     case 'thread:update':
                         _onThreadUpdate(payload);
+                        break;
+                    case 'result':
+                    case 'error':
+                        _onResponse(stanza.id, name, payload);
                         break;
                     default:
                          console.log('Unhandled: ' + JSON.stringify(stanza));
@@ -243,6 +263,9 @@ ApplicationWindow {
             } else {
                 console.log('ERROR: ' + JSON.stringify(object));
             }
+        }
+
+        function _noop() {
         }
     }
 }

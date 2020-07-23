@@ -11,16 +11,15 @@
 /Makefile.Debug
 /Makefile.Release
 /agent.js
+/agent/node_modules
 /cryptoshark_plugin_import.cpp
 /cryptoshark_qml_plugin_import.cpp
 /cryptoshark_qml_plugin_import.qrc
 /debug
 /moc_*.cpp
-/node_modules
 /qrc_*.cpp
 /qt.conf
 /release
 /tools/dist
 /tools/openssl-*
 /tools/qt5
-/vendor.js
