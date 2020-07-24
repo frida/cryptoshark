@@ -12,7 +12,7 @@ carefully injecting logging and other side-effecty code.
 
 ## Binaries
 
-Not yet available.
+Get them at: https://github.com/frida/cryptoshark/releases
 
 ## Building for local development
 
