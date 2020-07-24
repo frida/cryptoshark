@@ -16,6 +16,7 @@
 /cryptoshark_qml_plugin_import.cpp
 /cryptoshark_qml_plugin_import.qrc
 /debug
+/moc_*.h
 /moc_*.cpp
 /qrc_*.cpp
 /qt.conf
