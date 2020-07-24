@@ -30,6 +30,8 @@ public:
     Q_INVOKABLE void removeProbe(int functionId);
     Q_INVOKABLE void updateProbe(int functionId, QString script);
 
+    Q_INVOKABLE void resolveSymbols(int moduleId);
+
     void addCalls(QJsonObject summary);
     void addLogMessage(int functionId, QString message);
 
@@ -61,6 +63,7 @@ private:
     QSqlQuery m_getAll;
     QSqlQuery m_getById;
     QSqlQuery m_getBySymbol;
+    QSqlQuery m_getUnexported;
     QSqlQuery m_insert;
     QSqlQuery m_updateName;
     QSqlQuery m_updateCalls;

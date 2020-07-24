@@ -46,6 +46,8 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
     m_getById.setForwardOnly(true);
     m_getBySymbol.prepare(QStringLiteral("SELECT id FROM functions WHERE module = ? AND offset = ? LIMIT 1"));
     m_getBySymbol.setForwardOnly(true);
+    m_getUnexported.prepare(QStringLiteral("SELECT id, offset FROM functions WHERE module = ? AND exported = 0"));
+    m_getUnexported.setForwardOnly(true);
     m_insert.prepare(QStringLiteral("INSERT INTO functions (name, module, offset, exported) VALUES (?, ?, ?, ?)"));
     m_insert.setForwardOnly(true);
     m_updateName.prepare(QStringLiteral("UPDATE functions SET name = ? WHERE id = ?"));
@@ -170,6 +172,60 @@ void Functions::updateProbe(int functionId, QString script)
         payload[QStringLiteral("script")] = function->probeScript();
         Router::instance()->request(QStringLiteral("function:update-probe"), payload);
     }
+}
+
+void Functions::resolveSymbols(int moduleId)
+{
+    auto router = Router::instance();
+
+    QJsonObject payload;
+
+    auto module = Models::instance()->modules()->getById(moduleId);
+    if (module == nullptr)
+        return;
+    payload[QStringLiteral("module")] = module->path();
+
+    QVector<int> ids;
+    QJsonArray offsets;
+    m_getUnexported.addBindValue(moduleId);
+    m_getUnexported.exec();
+    while (m_getUnexported.next()) {
+        auto id = m_getUnexported.value(0).toInt();
+        auto offset = m_getUnexported.value(1).toInt();
+        ids += id;
+        offsets += QJsonValue(offset);
+    }
+    m_getUnexported.finish();
+    payload[QStringLiteral("offsets")] = offsets;
+
+    auto request = router->request(QStringLiteral("module:resolve-symbols"), payload);
+    QObject::connect(request, &Request::completed, [=] (QJsonValue result, RequestError *error) {
+        if (error != nullptr)
+            return;
+
+        m_database.transaction();
+
+        int i = 0;
+        foreach (auto nameValue, result.toArray()) {
+            if (!nameValue.isNull()) {
+                int id = ids[i];
+
+                int serial = 1;
+                while (true) {
+                    QString name = nameValue.toString();
+                    if (serial > 1)
+                        name += QString::number(serial);
+                    if (updateName(id, name))
+                        break;
+                    serial++;
+                }
+            }
+
+            i++;
+        }
+
+        m_database.commit();
+    });
 }
 
 void Functions::addCalls(QJsonObject summary)

@@ -151,6 +151,13 @@ SplitView {
                         }
                     }
                 }
+                Button {
+                    text: qsTr("Resolve Symbols")
+                    enabled: !!currentModule
+                    onClicked:  {
+                        models.functions.resolveSymbols(currentModule.id);
+                    }
+                }
             }
         }
     }

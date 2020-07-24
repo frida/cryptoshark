@@ -2,7 +2,8 @@ import { Service } from "./interfaces";
 
 export class ModuleMonitor implements Service {
     handlers = {
-        "module:get-functions": this.getFunctions
+        "module:get-functions": this.getFunctions,
+        "module:resolve-symbols": this.resolveSymbols
     };
 
     constructor(private moduleMap: ModuleMap) {
@@ -40,14 +41,32 @@ export class ModuleMonitor implements Service {
             .filter(e => e.type === "function")
             .map(e => [e.name, e.address.sub(base).toInt32()]);
     }
+
+    resolveSymbols({ module, offsets }: ResolveSymbolsQuery): ResolveSymbolsResult[] {
+        const m = find(this.moduleMap.values(), m => m.path === module);
+        if (m === undefined) {
+            throw new Error(`Module “${module}” not in map`);
+        }
+
+        const { base } = m;
+        return offsets.map(offset => DebugSymbol.fromAddress(base.add(offset)).name);
+    }
 }
 
 export interface ModuleRef {
     name: string;
 }
+
 export type ModuleFunction = [ModuleFunctionName, ModuleRelativeOffset];
 export type ModuleFunctionName = string;
 export type ModuleRelativeOffset = number;
+
+export interface ResolveSymbolsQuery {
+    module: string;
+    offsets: number[];
+}
+
+export type ResolveSymbolsResult = string | null;
 
 interface EnrichedModule {
     name: string;
