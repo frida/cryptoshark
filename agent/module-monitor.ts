@@ -1,8 +1,5 @@
 import { Service } from "./interfaces";
 
-// FIXME: ModuleMap#items() Module prototype is incorrect.
-const enumerateExports = Module.prototype.enumerateExports;
-
 export class ModuleMonitor implements Service {
     handlers = {
         "module:get-functions": this.getFunctions
@@ -39,7 +36,7 @@ export class ModuleMonitor implements Service {
         }
 
         const { base } = m;
-        return enumerateExports.call(m)
+        return m.enumerateExports()
             .filter(e => e.type === "function")
             .map(e => [e.name, e.address.sub(base).toInt32()]);
     }
