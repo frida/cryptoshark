@@ -65,7 +65,7 @@ Dialog {
                 id: script
 
                 anchors.fill: parent
-                font.family: "Lucida Console"
+                font.family: fixedFont
                 textFormat: TextEdit.PlainText
                 wrapMode: TextEdit.NoWrap
             }

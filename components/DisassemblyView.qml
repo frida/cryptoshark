@@ -31,7 +31,7 @@ TextArea {
     style: TextAreaStyle {
         backgroundColor: "#060606"
     }
-    font.family: "Lucida Console"
+    font.family: fixedFont
     textFormat: TextEdit.RichText
     wrapMode: TextEdit.NoWrap
     readOnly: true

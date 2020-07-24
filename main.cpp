@@ -3,6 +3,7 @@
 #include "router.h"
 
 #include <QApplication>
+#include <QFontDatabase>
 #include <QQmlApplicationEngine>
 #include <QtQml>
 
@@ -47,6 +48,8 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<NativePointer>("CryptoShark", 1, 0, "NativePointer", createNativePointerSingleton);
 
     QQmlApplicationEngine engine;
+    auto fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    engine.rootContext()->setContextProperty("fixedFont", fixedFont);
 #ifdef CRYPTOSHARK_STATIC_QT
     engine.setImportPathList(QStringList(QStringLiteral("qrc:/imports")));
 #endif
