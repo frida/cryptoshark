@@ -49,12 +49,12 @@ to hit “Build” in Qt Creator.
 
 - Grab the latest frida-qml binaries from
   [here](https://github.com/frida/frida/releases). Extract the tarball in your
-  Qt installation's `qml` directory – on Mac it is typically:
+  Qt installation's `qml` directory – on macOS it might be something like:
   `~/Qt/5.15.0/clang_64/qml/`.
   (We only provide macOS binaries for now. On other platforms you will have to
   build frida-core and frida-qml yourself.)
 
-- Open `cryptoshark.pro` with Qt Creator, select the `Release` configuration
+- Open `CryptoShark.pro` with Qt Creator, select the `Release` configuration
   and hit `Run`.
 
 ## Building a portable Windows binary
