@@ -1,6 +1,7 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.2
 import QtQuick.Dialogs 1.2
+import QtQuick.Layouts 1.2
 import Frida 1.0
 
 Dialog {
@@ -19,14 +20,12 @@ Dialog {
         _emitSelected();
     }
 
-    height: 270
     title: qsTr("Choose target process:")
     modality: Qt.WindowModal
     standardButtons: AbstractDialog.Ok | AbstractDialog.Cancel
 
     SplitView {
-        width: parent.width
-        height: parent.height
+        anchors.fill: parent
 
         TableView {
             id: devices
@@ -57,6 +56,9 @@ Dialog {
 
         TableView {
             id: processes
+            Layout.minimumWidth: 380
+            Layout.minimumHeight: 424
+            Layout.fillWidth: true
 
             TableViewColumn {
                 role: "smallIcon"
@@ -67,7 +69,7 @@ Dialog {
                 }
             }
             TableViewColumn { role: "pid"; title: "Pid"; width: 50; }
-            TableViewColumn { role: "name"; title: "Name"; width: 100; }
+            TableViewColumn { role: "name"; title: "Name"; width: 290; }
 
             model: processModel
 
