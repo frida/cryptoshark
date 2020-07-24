@@ -22,14 +22,14 @@ ApplicationWindow {
         processDialog.open();
     }
 
-    function attach(process) {
+    function attach(device, process) {
         if (_process !== null && process.pid === _process.pid) {
             return;
         }
         _process = process;
         Models.open(process.name);
         _models = Models;
-        Frida.localSystem.inject(agent, process.pid);
+        device.inject(agent, process.pid);
     }
 
     function detach() {
@@ -52,7 +52,6 @@ ApplicationWindow {
                 id: attach
                 text: qsTr("Attach")
                 onTriggered: {
-                    processModel.refresh();
                     processDialog.open();
                 }
             }
@@ -106,7 +105,6 @@ ApplicationWindow {
 
         Detached {
             onAttach: {
-                processModel.refresh();
                 processDialog.open();
            }
         }
@@ -134,10 +132,8 @@ ApplicationWindow {
         id: processDialog
 
         onSelected: {
-            app.attach(process);
+            app.attach(device, process);
         }
-
-        model: processModel
     }
 
     FunctionDialog {
@@ -153,15 +149,6 @@ ApplicationWindow {
 
     ListModel {
         id: _threadsModel
-    }
-
-    ProcessListModel {
-        id: processModel
-        device: Frida.localSystem
-        onError: {
-            errorDialog.text = message;
-            errorDialog.open();
-        }
     }
 
     Script {
