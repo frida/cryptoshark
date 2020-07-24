@@ -148,6 +148,7 @@ ApplicationWindow {
 
     MessageDialog {
         id: errorDialog
+        icon: StandardIcon.Critical;
     }
 
     ListModel {
