@@ -21,6 +21,3 @@
 /qrc_*.cpp
 /qt.conf
 /release
-/tools/dist
-/tools/openssl-*
-/tools/qt5

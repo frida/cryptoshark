@@ -70,21 +70,9 @@ without any external dependencies.
 * Git
 * Strawberry Perl
 * Python
-* nasm
 
 Run `tools\windows\env.bat` to enter the environment, which is required for the
 next steps.
-
-### Building OpenSSL
-
-- Download the latest OpenSSL 1.1.x tarball and extract it next to the
-  Cryptoshark repo.
-
-- Change to that directory and run:
-
-```
-..\cryptoshark\tools\windows\01-build-openssl.bat
-```
 
 ### Building Qt
 
@@ -106,9 +94,10 @@ perl init-repository --module-subset=essential,qtquickcontrols`.
 ```
 
 - Change working directory to `qt5\qtbase` and run
-  `..\..\cryptoshark\tools\windows\02-build-qt.bat`.
+  `..\..\cryptoshark\tools\windows\build-qt.bat`.
 
-- Change working directory to `qt5\qtdeclarative` and run `qmake` followed by `nmake`.
+- Change working directory to `qt5\qtdeclarative` and run `qmake` followed by
+  `nmake`.
 
 - Change to `qt5\qtquickcontrols` and run `qmake` followed by `nmake`.
 
