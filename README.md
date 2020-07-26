@@ -76,30 +76,9 @@ next steps.
 
 ### Building Qt
 
-- Change back to the directory above Cryptoshark.
+- Get the source code by running: `get-qt`
 
-- Get the qt5 repo: `git clone git://code.qt.io/qt/qt5.git`.
-
-- Switch to the 5.15 branch:
-
-```
-cd qt5
-git checkout 5.15
-```
-
-- Get the source code:
-
-```
-perl init-repository --module-subset=essential,qtquickcontrols`.
-```
-
-- Change working directory to `qt5\qtbase` and run
-  `..\..\cryptoshark\tools\windows\build-qt.bat`.
-
-- Change working directory to `qt5\qtdeclarative` and run `qmake` followed by
-  `nmake`.
-
-- Change to `qt5\qtquickcontrols` and run `qmake` followed by `nmake`.
+- Then: `build-qt`
 
 ### Building frida-qml
 
