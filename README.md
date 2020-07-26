@@ -59,8 +59,6 @@ to hit “Build” in Qt Creator.
 
 ## Building a portable Windows binary
 
-> FIXME: This section is outdated.
-
 In order to build a portable binary we will need a static build of Qt and
 frida-qml. This is not recommended for development due to the prolonged linking
 times, but it is very useful for generating a portable Cryptoshark binary
@@ -68,37 +66,47 @@ without any external dependencies.
 
 ### Prerequisites
 
-* MS Visual Studio 2013
-* Windows SDK 8.1
+* MS Visual Studio 2019
 * Git
-* Perl
+* Strawberry Perl
 * Python
 * nasm
 
-Review all the paths in `tools\env.bat` to make sure everything matches your
-system. Now, run it to enter the environment, which is required for the next
-steps.
+Run `tools\windows\env.bat` to enter the environment, which is required for the
+next steps.
 
 ### Building OpenSSL
 
-- Download the latest openssl tarball and extract it next to the Cryptoshark repo.
+- Download the latest OpenSSL 1.1.x tarball and extract it next to the
+  Cryptoshark repo.
 
-- Change to that directory and run: `..\Cryptoshark\tools\01-build-openssl.bat`.
+- Change to that directory and run:
+
+```
+..\cryptoshark\tools\windows\01-build-openssl.bat
+```
 
 ### Building Qt
 
-- Get the qt5 repo: `git clone git://gitorious.org/qt/qt5.git qt5`.
+- Change back to the directory above Cryptoshark.
 
-- Switch to the 5.3 branch:
+- Get the qt5 repo: `git clone git://code.qt.io/qt/qt5.git`.
+
+- Switch to the 5.15 branch:
 
 ```
 cd qt5
-git checkout 5.3
+git checkout 5.15
 ```
 
-- Get the source code: `perl init-repository --no-webkit`.
+- Get the source code:
 
-- Change working directory to `qt5\qtbase` and run `..\..\Cryptoshark\tools\02-build-qt.bat`.
+```
+perl init-repository --module-subset=essential,qtquickcontrols`.
+```
+
+- Change working directory to `qt5\qtbase` and run
+  `..\..\cryptoshark\tools\windows\02-build-qt.bat`.
 
 - Change working directory to `qt5\qtdeclarative` and run `qmake` followed by `nmake`.
 
