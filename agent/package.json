@@ -2,7 +2,7 @@
   "name": "cryptoshark-agent",
   "version": "0.1.0",
   "private": true,
-  "description": "CryptoShark's agent injected into target processes",
+  "description": "Cryptoshark's agent injected into target processes",
   "homepage": "https://github.com/frida/cryptoshark",
   "repository": {
     "type": "git",

@@ -6,7 +6,7 @@
 /*.user
 /*.vcxproj*
 /.qmake.stash
-/CryptoShark.app
+/Cryptoshark.app
 /Makefile
 /Makefile.Debug
 /Makefile.Release

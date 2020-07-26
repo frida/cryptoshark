@@ -1,4 +1,4 @@
-import CryptoShark 1.0
+import Cryptoshark 1.0
 
 import QtQuick 2.2
 import QtQuick.Controls 1.2
@@ -40,7 +40,7 @@ ApplicationWindow {
         _models = null;
     }
 
-    title: qsTr("CryptoShark")
+    title: qsTr("Cryptoshark")
     width: 640
     height: 480
     visible: true

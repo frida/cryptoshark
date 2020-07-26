@@ -1,4 +1,4 @@
-# CryptoShark
+# Cryptoshark
 
 Self-optimizing cross-platform code tracer based on dynamic recompilation,
 powered by Frida and Capstone. Works at the machine code level, no source
@@ -18,7 +18,7 @@ Get them at: https://github.com/frida/cryptoshark/releases
 
 ### Building agent.js
 
-This is the blob of JavaScript that CryptoShark injects into target processes.
+This is the blob of JavaScript that Cryptoshark injects into target processes.
 
 #### Fetch build-time dependencies
 
@@ -54,7 +54,7 @@ to hit “Build” in Qt Creator.
   (We only provide macOS binaries for now. On other platforms you will have to
   build frida-core and frida-qml yourself.)
 
-- Open `CryptoShark.pro` with Qt Creator, select the `Release` configuration
+- Open `Cryptoshark.pro` with Qt Creator, select the `Release` configuration
   and hit `Run`.
 
 ## Building a portable Windows binary
@@ -63,7 +63,7 @@ to hit “Build” in Qt Creator.
 
 In order to build a portable binary we will need a static build of Qt and
 frida-qml. This is not recommended for development due to the prolonged linking
-times, but it is very useful for generating a portable CryptoShark binary
+times, but it is very useful for generating a portable Cryptoshark binary
 without any external dependencies.
 
 ### Prerequisites
@@ -81,9 +81,9 @@ steps.
 
 ### Building OpenSSL
 
-- Download the latest openssl tarball and extract it next to the CryptoShark repo.
+- Download the latest openssl tarball and extract it next to the Cryptoshark repo.
 
-- Change to that directory and run: `..\CryptoShark\tools\01-build-openssl.bat`.
+- Change to that directory and run: `..\Cryptoshark\tools\01-build-openssl.bat`.
 
 ### Building Qt
 
@@ -98,7 +98,7 @@ git checkout 5.3
 
 - Get the source code: `perl init-repository --no-webkit`.
 
-- Change working directory to `qt5\qtbase` and run `..\..\CryptoShark\tools\02-build-qt.bat`.
+- Change working directory to `qt5\qtbase` and run `..\..\Cryptoshark\tools\02-build-qt.bat`.
 
 - Change working directory to `qt5\qtdeclarative` and run `qmake` followed by `nmake`.
 
@@ -113,7 +113,7 @@ git checkout 5.3
 
 - Change to `frida\frida-qml` and run `qmake` followed by `nmake install`.
 
-### Building CryptoShark
+### Building Cryptoshark
 
 - Run `npm install` followed by `gulp build`.
 

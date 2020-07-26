@@ -15,6 +15,6 @@
 	<key>CFBundleExecutable</key>
 	<string>@EXECUTABLE@</string>
 	<key>CFBundleIdentifier</key>
-	<string>re.frida.CryptoShark</string>
+	<string>re.frida.Cryptoshark</string>
 </dict>
 </plist>

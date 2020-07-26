@@ -43,9 +43,9 @@ int main(int argc, char *argv[])
     qRegisterMetaType<Functions *>("Functions *");
     qRegisterMetaType<Function *>("Function *");
 
-    qmlRegisterSingletonType<NativePointer>("CryptoShark", 1, 0, "Router", createRouterSingleton);
-    qmlRegisterSingletonType<NativePointer>("CryptoShark", 1, 0, "Models", createModelsSingleton);
-    qmlRegisterSingletonType<NativePointer>("CryptoShark", 1, 0, "NativePointer", createNativePointerSingleton);
+    qmlRegisterSingletonType<NativePointer>("Cryptoshark", 1, 0, "Router", createRouterSingleton);
+    qmlRegisterSingletonType<NativePointer>("Cryptoshark", 1, 0, "Models", createModelsSingleton);
+    qmlRegisterSingletonType<NativePointer>("Cryptoshark", 1, 0, "NativePointer", createNativePointerSingleton);
 
     QQmlApplicationEngine engine;
     auto fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);

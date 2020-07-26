@@ -1,4 +1,4 @@
-import CryptoShark 1.0
+import Cryptoshark 1.0
 
 import QtQuick 2.0
 import QtQuick.Controls 1.2
