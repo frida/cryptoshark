@@ -24,5 +24,7 @@ call ..\qt5\configure ^
     -no-openssl -schannel ^
     -no-icu ^
     -no-dbus ^
+    -no-feature-qml-debug ^
+    -no-feature-qml-devtools ^
     || exit /b
 nmake || exit /b
