@@ -1,6 +1,5 @@
 set PERLIO=:raw
 perl -i -pe "s, stl exceptions,,g" qt5\qtbase\src\angle\src\config.pri || exit /b
-perl -i -pe "s, \$\$QMAKE_PYTHON , \"\$\$QMAKE_PYTHON\" ,g" qt5\qtdeclarative\src\3rdparty\masm\masm.pri || exit /b
 set PERLIO=
 
 mkdir qt-build || exit /b
@@ -24,4 +23,4 @@ call ..\qt5\configure ^
     -no-icu ^
     -no-dbus ^
     || exit /b
-nmake
+nmake || exit /b

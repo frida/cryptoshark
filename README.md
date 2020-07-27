@@ -69,10 +69,11 @@ without any external dependencies.
 * MS Visual Studio 2019
 * Git
 * Strawberry Perl
-* Python
+* Python (Note: Installation location cannot contain spaces due to bugs in Qt's
+  build system.)
 
-Run `tools\windows\env.bat` to enter the environment, which is required for the
-next steps.
+Run `tools\windows\env-x86_64.bat` to enter the environment, which is required
+for the next steps.
 
 ### Building Qt
 
@@ -82,16 +83,16 @@ next steps.
 
 ### Building frida-qml
 
-- Build `frida.sln` for `Release|Win32` as described [here](http://www.frida.re/docs/building/).
+- Build `frida.sln` for `Release|x64` as described [here](https://frida.re/docs/building/).
 
 - Edit `frida-qml.pro` and change `win32:installPath` to point to
-  your `qt5\qtbase\qml\Frida`.
+  your `dist\msvc2019_64\qml\Frida`.
 
 - Change to `frida\frida-qml` and run `qmake` followed by `nmake install`.
 
 ### Building Cryptoshark
 
-- Run `npm install` followed by `gulp build`.
+- Run `npm install` in `.\agent\`.
 
 - Run `tools\generate-qml-imports-qrc.py`.
 
