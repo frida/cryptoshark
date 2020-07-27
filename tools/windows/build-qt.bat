@@ -1,5 +1,7 @@
 set PERLIO=:raw
-perl -i -pe "s, stl exceptions,,g" qt5\qtbase\src\angle\src\config.pri || exit /b
+perl -i -pe "s, stl exceptions,," qt5\qtbase\src\angle\src\config.pri || exit /b
+perl -i -pe "s,_HAS_EXCEPTIONS=0 ,," qt5\qtbase\src\angle\src\config.pri || exit /b
+perl -i -pe "s, WIN32 , WIN32 _HAS_EXCEPTIONS=0 ," qt5\qtbase\mkspecs\common\msvc-desktop.conf || exit /b
 set PERLIO=
 
 mkdir qt-build || exit /b
