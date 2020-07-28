@@ -1,1 +1,1 @@
-@%~dp0env-common.bat msvc2019 x86
+@%~dp0env-common.bat x86 x86 msvc2019
