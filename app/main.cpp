@@ -7,6 +7,13 @@
 #include <QQmlApplicationEngine>
 #include <QtQml>
 
+#ifdef CRYPTOSHARK_STATIC_QT
+Q_IMPORT_PLUGIN(FridaQmlPlugin)
+# ifdef _MSC_VER
+#  pragma comment(linker, "/include:?qml_register_types_Frida@@YAXXZ")
+# endif
+#endif
+
 static QObject *createRouterSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
     Q_UNUSED(engine);
@@ -51,9 +58,20 @@ int main(int argc, char *argv[])
     auto fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     engine.rootContext()->setContextProperty("fixedFont", fixedFont);
 #ifdef CRYPTOSHARK_STATIC_QT
-    engine.setImportPathList(QStringList(QStringLiteral("qrc:/imports")));
+    engine.setImportPathList(QStringList(QStringLiteral("qrc:/qt-project.org/imports")));
+#else
+    QDir candidate = QDir(QCoreApplication::applicationDirPath());
+    const int maxLevelsUp = 5;
+    for (int i = 0; i != maxLevelsUp; i++) {
+        if (candidate.cd("qml")) {
+            engine.addImportPath(candidate.absolutePath());
+            break;
+        }
+        if (!candidate.cdUp())
+            break;
+    }
 #endif
-    engine.load(QUrl(QStringLiteral("qrc:///main.qml")));
+    engine.load(QUrl(QStringLiteral("qrc:///ui/main.qml")));
 
     return app.exec();
 }

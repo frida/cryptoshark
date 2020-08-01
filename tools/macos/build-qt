@@ -1,0 +1,35 @@
+#!/bin/sh
+
+cd "$CRYPTOSHARK_PARENTDIR"
+
+if [ -d "build-qt-$CRYPTOSHARK_ARCH" ]; then
+  echo "Already built. Wipe build-qt-$CRYPTOSHARK_ARCH to rebuild."
+  exit 0
+fi
+
+mkdir "build-qt-$CRYPTOSHARK_ARCH" || exit $?
+pushd "build-qt-$CRYPTOSHARK_ARCH" > /dev/null
+../qt5/configure \
+    -opensource -confirm-license \
+    -prefix $CRYPTOSHARK_QTDIR \
+    -feature-relocatable \
+    -release \
+    -optimize-size \
+    -ltcg \
+    -static \
+    -no-sql-db2 -no-sql-ibase -no-sql-mysql -no-sql-oci -no-sql-odbc -no-sql-psql -no-sql-tds \
+    -nomake examples \
+    -nomake tests \
+    -qt-zlib -qt-libpng -qt-libjpeg \
+    -no-freetype -no-harfbuzz \
+    -no-openssl -securetransport \
+    -no-icu \
+    -no-fontconfig \
+    -no-dbus \
+    -no-feature-qml-debug \
+    || exit $?
+make -j$CRYPTOSHARK_MAKEJ || exit $?
+make install || exit $?
+popd > /dev/null
+
+exit 0

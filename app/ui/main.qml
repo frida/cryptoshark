@@ -153,7 +153,7 @@ ApplicationWindow {
 
     Script {
         id: agent
-        url: Qt.resolvedUrl("./agent.js")
+        url: Qt.resolvedUrl("../agent.js")
         runtime: Script.Runtime.V8
 
         property var _requests: Object()

@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>ui/main.qml</file>
+        <file>agent.js</file>
+        <file>ui/session/Attached.qml</file>
+        <file>ui/session/Attaching.qml</file>
+        <file>ui/session/Detached.qml</file>
+        <file>ui/components/DisassemblyView.qml</file>
+        <file>ui/components/ProcessDialog.qml</file>
+        <file>ui/components/FunctionDialog.qml</file>
+    </qresource>
+</RCC>

@@ -1,1 +1,4 @@
-@%~dp0env-common.bat x86 x86 msvc2019
+@echo off
+call %~dp0activate-env.bat x86
+cd %~dp0..\..\
+cmd

@@ -1,0 +1,17 @@
+pushd "$(dirname "$BASH_SOURCE")/../../" > /dev/null || exit $?
+export CRYPTOSHARK_SRCDIR=$(pwd)
+pushd .. > /dev/null
+export CRYPTOSHARK_PARENTDIR=$(pwd)
+popd > /dev/null
+popd > /dev/null
+export CRYPTOSHARK_DISTDIR="$CRYPTOSHARK_PARENTDIR/dist"
+
+if [ -z "$CRYPTOSHARK_ARCH" ]; then
+  export CRYPTOSHARK_ARCH=$(uname -m)
+fi
+
+export CRYPTOSHARK_QTDIR="$CRYPTOSHARK_DISTDIR/gcc_64"
+
+[ -z "$CRYPTOSHARK_MAKEJ" ] && export CRYPTOSHARK_MAKEJ=8
+
+export PATH="$CRYPTOSHARK_QTDIR/bin:$CRYPTOSHARK_SRCDIR/tools/linux:$PATH"
