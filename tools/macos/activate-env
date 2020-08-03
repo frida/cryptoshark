@@ -1,4 +1,9 @@
-pushd "$(dirname "$BASH_SOURCE")/../../" > /dev/null || exit $?
+cs_activate_env="$_"
+if [ -n "$BASH_SOURCE" ]; then
+  cs_activate_env="$BASH_SOURCE"
+fi
+pushd "$(dirname "$cs_activate_env")/../../" > /dev/null || exit $?
+unset cs_activate_env
 export CRYPTOSHARK_SRCDIR=$(pwd)
 pushd .. > /dev/null
 export CRYPTOSHARK_PARENTDIR=$(pwd)
