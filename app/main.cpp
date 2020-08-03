@@ -7,13 +7,6 @@
 #include <QQmlApplicationEngine>
 #include <QtQml>
 
-#ifdef CRYPTOSHARK_STATIC_QT
-Q_IMPORT_PLUGIN(FridaQmlPlugin)
-# ifdef _MSC_VER
-#  pragma comment(linker, "/include:?qml_register_types_Frida@@YAXXZ")
-# endif
-#endif
-
 static QObject *createRouterSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
     Q_UNUSED(engine);
