@@ -12,7 +12,7 @@ popd > /dev/null
 export CRYPTOSHARK_DISTDIR="$CRYPTOSHARK_PARENTDIR/dist"
 
 if [ -z "$CRYPTOSHARK_ARCH" ]; then
-  export CRYPTOSHARK_ARCH=$(uname -m)
+  export CRYPTOSHARK_ARCH=$("$CRYPTOSHARK_SRCDIR/tools/unix/detect-arch")
 fi
 
 export CRYPTOSHARK_QTDIR="$CRYPTOSHARK_DISTDIR/clang_64"

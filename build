@@ -1,6 +1,8 @@
 #!/bin/bash
 
-platform=$(uname -s | tr '[A-Z]' '[a-z]' | sed 's,^darwin$,macos,')
+cd "$(dirname $0)"
+
+platform=$(tools/unix/detect-platform)
 arch=$1
 if [ -n "$CRYPTOSHARK_ARCH" ]; then
   if [ -n "$arch" ]; then
@@ -11,7 +13,7 @@ else
   if [ -n "$arch" ]; then
     export CRYPTOSHARK_ARCH="$arch"
   fi
-  . "$(dirname $0)/tools/$platform/activate-env" || exit $?
+  . tools/$platform/activate-env || exit $?
 fi
 
 if ! command -v qmake > /dev/null; then
@@ -19,7 +21,7 @@ if ! command -v qmake > /dev/null; then
   exit 1
 fi
 
-"$CRYPTOSHARK_SRCDIR/bootstrap" "$CRYPTOSHARK_ARCH" || exit $?
+"./bootstrap" "$CRYPTOSHARK_ARCH" || exit $?
 
 cd "$CRYPTOSHARK_PARENTDIR"
 mkdir -p "build-cryptoshark-$CRYPTOSHARK_ARCH" || exit $?

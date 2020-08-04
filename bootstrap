@@ -2,11 +2,11 @@
 
 frida_version=12.11.6
 
-platform=$(uname -s | tr '[A-Z]' '[a-z]' | sed 's,^darwin$,macos,')
-arch=$1
-[ -z "$arch" ] && arch=$(uname -m)
-
 cd "$(dirname $0)"
+
+platform=$(tools/unix/detect-platform)
+arch=$1
+[ -z "$arch" ] && arch=$(tools/unix/detect-arch)
 
 devkit_url="https://github.com/frida/frida/releases/download/$frida_version/frida-core-devkit-$frida_version-$platform-$arch.tar.xz"
 devkit_dir="ext/frida-core/$arch"
