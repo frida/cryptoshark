@@ -7,6 +7,15 @@ if [ -d "build-qt-$CRYPTOSHARK_ARCH" ]; then
   exit 0
 fi
 
+pushd qt5/qtbase > /dev/null
+git reset --hard
+case $CRYPTOSHARK_ARCH in
+  arm64e)
+    patch -p1 < "$CRYPTOSHARK_SRCDIR/tools/macos/qt-apple-silicon.patch" || exit $?
+    ;;
+esac
+popd > /dev/null
+
 mkdir "build-qt-$CRYPTOSHARK_ARCH" || exit $?
 pushd "build-qt-$CRYPTOSHARK_ARCH" > /dev/null
 ../qt5/configure \
