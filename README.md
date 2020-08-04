@@ -50,14 +50,16 @@ This will monitor the TypeScript source code and incrementally compile
 `app/agent.js`. Note that the agent is included as a resource, so remember to
 `build`.
 
-## Building a portable Windows binary
+## Building a portable binary
 
 In order to build a portable binary we will need a static build of Qt. This is
 not recommended for development due to the prolonged linking times, but it is
 very useful for generating a portable Cryptoshark binary without any external
 dependencies.
 
-### Prerequisites
+### Windows
+
+#### Prerequisites
 
 * MS Visual Studio 2019
 * Git
@@ -65,7 +67,7 @@ dependencies.
 * Python (Note: Installation location cannot contain spaces due to bugs in Qt's
   build system.)
 
-### Building Qt
+#### Building Qt
 
 Run `tools\windows\env-x86_64.bat` to enter the environment, then:
 
@@ -73,7 +75,7 @@ Run `tools\windows\env-x86_64.bat` to enter the environment, then:
 
 - And finally: `build-qt`
 
-### Building Cryptoshark
+#### Building Cryptoshark
 
 - Change to the root directory of this repo.
 
@@ -82,3 +84,27 @@ Run `tools\windows\env-x86_64.bat` to enter the environment, then:
 - A fresh new portable binary is now at:
 
     ..\build-cryptoshark-x86_64\app\release\Cryptoshark.exe
+
+### macOS
+
+#### Prerequisites
+
+* Xcode
+
+#### Building Qt
+
+Run `. tools/macos/activate-env` to enter the environment, then:
+
+- Get the source code by running: `get-qt`
+
+- And finally: `build-qt`
+
+#### Building Cryptoshark
+
+- Change to the root directory of this repo.
+
+- Run `./build`.
+
+- A fresh new portable binary is now at:
+
+    ../build-cryptoshark-$arch/app/Cryptoshark.app/Contents/MacOS/Cryptoshark
