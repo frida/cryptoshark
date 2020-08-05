@@ -29,4 +29,5 @@ jobs:
         get-qt
         build-qt
         ./build
-        ls -l ../build-cryptoshark-$arch/app/Cryptoshark.app/Contents/MacOS/Cryptoshark
+        ls -l ../build-cryptoshark-x86_64/app/Cryptoshark.app/Contents/MacOS/Cryptoshark
+              
