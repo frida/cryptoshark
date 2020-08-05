@@ -31,5 +31,6 @@ jobs:
     - name: Build
       run: |
         cd
+        dir
         build
         dir ..\build-cryptoshark-x86_64\app\release\Cryptoshark.exe
