@@ -26,7 +26,7 @@ jobs:
     - name: Build
       run: |
         tools\windows\env-x86_64.bat
-        get-qt
-        build-qt
+        tools\windows\get-qt
+        tools\windows\build-qt
         build
         dir ..\build-cryptoshark-x86_64\app\release\Cryptoshark.exe
