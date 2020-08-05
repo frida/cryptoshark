@@ -26,4 +26,5 @@ jobs:
     - name: Build
       run: |
         sudo apt install qt5-default qtdeclarative5-dev
+        . tools/linux/activate-env
         ./build
