@@ -30,5 +30,6 @@ jobs:
         tools\windows\build-qt
     - name: Build
       run: |
+        cd
         build
         dir ..\build-cryptoshark-x86_64\app\release\Cryptoshark.exe
