@@ -25,4 +25,8 @@ jobs:
     # Runs a set of commands using the runners shell
     - name: Build
       run: |
-        make
+        tools\windows\env-x86_64.bat
+        get-qt
+        build-qt
+        build
+        dir ..\build-cryptoshark-x86_64\app\release\Cryptoshark.exe
