@@ -13,7 +13,7 @@ clean:
 
 .PHONY: install
 install:
-	sudo apt install qt5-default qtdeclarative5-dev
+	./scripts/install.sh
 
 .PHONY: build
 build:
