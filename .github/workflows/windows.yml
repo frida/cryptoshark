@@ -29,6 +29,7 @@ jobs:
         tools\windows\get-qt
         tools\windows\build-qt
     - name: Build
+      working-directory: ./
       run: |
         cd
         dir
