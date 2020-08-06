@@ -7,8 +7,6 @@ name: macOS
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -29,5 +27,11 @@ jobs:
         get-qt
         build-qt
         ./build
-        ls -l ../build-cryptoshark-x86_64/app/Cryptoshark.app/Contents/MacOS/Cryptoshark
-              
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest_macos"
+        prerelease: true
+        title: "Latest macOS Build"
+        files: |
+          ../build-cryptoshark-x86_64/app/Cryptoshark.app/Contents/MacOS/Cryptoshark
