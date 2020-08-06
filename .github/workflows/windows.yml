@@ -22,14 +22,15 @@ jobs:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
 
-    # Runs a set of commands using the runners shell
+    # Runs a set of commands using the runners shel
     - name: Prepare
       run: |
+        pushd
         tools\windows\env-x86_64.bat
         tools\windows\get-qt
         tools\windows\build-qt
+        popd
     - name: Build
-      working-directory: ./
       run: |
         cd
         dir
