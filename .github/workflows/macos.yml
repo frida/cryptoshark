@@ -27,6 +27,10 @@ jobs:
         get-qt
         build-qt
         ./build
+        cd ../build-cryptoshark-x86_64/app
+        macdeployqt Cryptoshark.app
+        ls -l
+        otool -L Cryptoshark.app/Contents/MacOS/Cryptoshark
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
