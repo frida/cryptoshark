@@ -1,0 +1,13 @@
+diff --git a/src/3rdparty/masm/masm-defs.pri b/src/3rdparty/masm/masm-defs.pri
+index 90a795c6ce..cc4caa308b 100644
+--- a/src/3rdparty/masm/masm-defs.pri
++++ b/src/3rdparty/masm/masm-defs.pri
+@@ -27,7 +27,7 @@ INCLUDEPATH += $$PWD
+ disassembler {
+     if(isEqual(QT_ARCH, "i386")|isEqual(QT_ARCH, "x86_64")): DEFINES += WTF_USE_UDIS86=1
+     if(isEqual(QT_ARCH, "arm")): DEFINES += WTF_USE_ARMV7_DISASSEMBLER=1
+-    if(isEqual(QT_ARCH, "arm64")): DEFINES += WTF_USE_ARM64_DISASSEMBLER=1
++    if(isEqual(QT_ARCH, "arm64")|isEqual(QT_ARCH, "arm64e")): DEFINES += WTF_USE_ARM64_DISASSEMBLER=1
+     if(isEqual(QT_ARCH, "mips")): DEFINES += WTF_USE_MIPS32_DISASSEMBLER=1
+ } else {
+     DEFINES += WTF_USE_UDIS86=0
