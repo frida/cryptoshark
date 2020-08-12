@@ -32,6 +32,18 @@ call ..\qt5\configure ^
     -no-icu ^
     -no-dbus ^
     -no-feature-qml-debug ^
+    -no-feature-assistant ^
+    -no-feature-designer ^
+    -no-feature-distancefieldgenerator ^
+    -no-feature-kmap2qmap ^
+    -no-feature-linguist ^
+    -no-feature-makeqpf ^
+    -no-feature-pixeltool ^
+    -no-feature-qev ^
+    -no-feature-qtattributionsscanner ^
+    -no-feature-qtdiag ^
+    -no-feature-qtpaths ^
+    -no-feature-qtplugininfo ^
     || exit /b
 nmake || exit /b
 nmake install || exit /b
