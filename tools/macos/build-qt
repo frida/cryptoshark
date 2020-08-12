@@ -22,16 +22,14 @@ if [ -d "build-qt-$CRYPTOSHARK_ARCH" ]; then
   exit 0
 fi
 
-for module in qtbase qtdeclarative; do
-  pushd qt5/$module > /dev/null
-  git reset --hard
-  case $CRYPTOSHARK_ARCH in
-    arm64e)
-      patch -p1 < "$CRYPTOSHARK_SRCDIR/tools/macos/$module-apple-silicon.patch" || exit $?
-      ;;
-  esac
-  popd > /dev/null
-done
+pushd qt5/qtbase > /dev/null
+git reset --hard
+case $CRYPTOSHARK_ARCH in
+  arm64)
+    patch -p1 < "$CRYPTOSHARK_SRCDIR/tools/macos/qtbase-apple-silicon.patch" || exit $?
+    ;;
+esac
+popd > /dev/null
 
 mkdir "build-qt-$CRYPTOSHARK_ARCH" || exit $?
 pushd "build-qt-$CRYPTOSHARK_ARCH" > /dev/null

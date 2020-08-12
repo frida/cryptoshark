@@ -1,25 +1,3 @@
-diff --git a/configure.json b/configure.json
-index 50d69b740d..dad536d5a6 100644
---- a/configure.json
-+++ b/configure.json
-@@ -1249,7 +1249,7 @@
-         },
-         "neon": {
-             "label": "NEON",
--            "condition": "(arch.arm || arch.arm64) && subarch.neon",
-+            "condition": "(arch.arm || arch.arm64 || arch.arm64e) && subarch.neon",
-             "output": [
-                 "privateConfig",
-                 { "type": "define", "name": "QT_COMPILER_SUPPORTS_NEON", "value": 1 }
-@@ -1606,7 +1606,7 @@ Configure with '-qreal float' to create a build that is binary-compatible with 5
-                         {
-                             "type": "feature",
-                             "args": "neon",
--                            "condition": "arch.arm || arch.arm64"
-+                            "condition": "arch.arm || arch.arm64 || arch.arm64e"
-                         },
-                         {
-                             "type": "feature",
 diff --git a/mkspecs/common/macx.conf b/mkspecs/common/macx.conf
 index d16b77acb8..adab89d673 100644
 --- a/mkspecs/common/macx.conf
@@ -30,58 +8,16 @@ index d16b77acb8..adab89d673 100644
  
 -QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 -QMAKE_APPLE_DEVICE_ARCHS = x86_64
-+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.16
-+QMAKE_APPLE_DEVICE_ARCHS = arm64e
++QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.00
++QMAKE_APPLE_DEVICE_ARCHS = arm64
  
 -# Should be 10.15, but as long as the CI builds with
 -# older SDKs we have to keep this.
 -QT_MAC_SDK_VERSION_MIN = 10.14
 -
 -QT_MAC_SDK_VERSION_MAX = 10.15
-+QT_MAC_SDK_VERSION_MIN = 10.16
-+QT_MAC_SDK_VERSION_MAX = 10.16
++QT_MAC_SDK_VERSION_MIN = 11.00
++QT_MAC_SDK_VERSION_MAX = 11.00
  
  device.sdk = macosx
  device.target = device
-diff --git a/src/3rdparty/pcre2/pcre2.pro b/src/3rdparty/pcre2/pcre2.pro
-index bfa42b88d3..6795914c60 100644
---- a/src/3rdparty/pcre2/pcre2.pro
-+++ b/src/3rdparty/pcre2/pcre2.pro
-@@ -24,6 +24,7 @@ uikit|qnx|winrt: DEFINES += PCRE2_DISABLE_JIT
- win32:contains(QT_ARCH, "arm"): DEFINES += PCRE2_DISABLE_JIT
- win32:contains(QT_ARCH, "arm64"): DEFINES += PCRE2_DISABLE_JIT
- macos:contains(QT_ARCH, "arm64"): DEFINES += PCRE2_DISABLE_JIT
-+macos:contains(QT_ARCH, "arm64e"): DEFINES += PCRE2_DISABLE_JIT
- 
- SOURCES += \
-     $$PWD/src/pcre2_auto_possess.c \
-diff --git a/src/corelib/global/archdetect.cpp b/src/corelib/global/archdetect.cpp
-index 1d00b7f5a5..e52b95201e 100644
---- a/src/corelib/global/archdetect.cpp
-+++ b/src/corelib/global/archdetect.cpp
-@@ -45,6 +45,12 @@
- #  define ARCH_PROCESSOR "alpha"
- #elif defined(Q_PROCESSOR_ARM_32)
- #  define ARCH_PROCESSOR "arm"
-+#elif defined(Q_PROCESSOR_ARM_64) && defined(__clang__)
-+# if __has_feature(ptrauth_calls)
-+#  define ARCH_PROCESSOR "arm64e"
-+# else
-+#  define ARCH_PROCESSOR "arm64"
-+# endif
- #elif defined(Q_PROCESSOR_ARM_64)
- #  define ARCH_PROCESSOR "arm64"
- #elif defined(Q_PROCESSOR_AVR32)
-diff --git a/src/gui/painting/painting.pri b/src/gui/painting/painting.pri
-index c68e8d6e9a..46c37f7a93 100644
---- a/src/gui/painting/painting.pri
-+++ b/src/gui/painting/painting.pri
-@@ -146,7 +146,7 @@ gcc:equals(QT_GCC_MAJOR_VERSION, 5) {
-     NEON_HEADERS += painting/qdrawhelper_neon_p.h
- }
- !uikit:!win32:contains(QT_ARCH, "arm"): CONFIG += no_clang_integrated_as
--!android:!uikit:!win32:!integrity:!contains(QT_ARCH, "arm64") {
-+!android:!uikit:!win32:!integrity:!contains(QT_ARCH, "arm64"):!contains(QT_ARCH, "arm64e") {
-     NEON_ASM += ../3rdparty/pixman/pixman-arm-neon-asm.S painting/qdrawhelper_neon_asm.S
-     DEFINES += ENABLE_PIXMAN_DRAWHELPERS
- }
