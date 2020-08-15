@@ -5,4 +5,4 @@ cd "$CRYPTOSHARK_PARENTDIR"
 git clone git://code.qt.io/qt/qt5.git || exit $?
 cd qt5
 git checkout 5.15 || exit $?
-perl init-repository --module-subset=qtbase,qtdeclarative,qtquickcontrols2,qttools
+perl init-repository --module-subset=qtbase,qtdeclarative,qtgraphicaleffects,qtquickcontrols2,qttools
