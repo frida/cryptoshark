@@ -15,9 +15,7 @@ Controls.Dialog {
         }
     }
 
-    onAccepted: {
-        _emitSelected();
-    }
+    onAccepted: _emitSelected()
 
     width: parent.width - 50
     height: parent.height - 20
@@ -56,6 +54,7 @@ Controls.Dialog {
                 width: (parent !== null) ? parent.width : 50
                 highlighted: ListView.isCurrentItem
                 onClicked: processes.currentIndex = index
+                onDoubleClicked: dialog.accept()
             }
 
             model: processModel
