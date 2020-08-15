@@ -1,6 +1,5 @@
 import QtQuick 2.2
-import QtQuick.Controls 1.2
-import QtQuick.Controls.Styles 1.1
+import QtQuick.Controls 2.3
 
 TextArea {
     function render(instructions) {
@@ -28,11 +27,13 @@ TextArea {
         return result;
     }
 
-    style: TextAreaStyle {
-        backgroundColor: "#060606"
+    background: Rectangle {
+        color: "#060606"
     }
-    font.family: fixedFont
+    font: fixedFont
     textFormat: TextEdit.RichText
     wrapMode: TextEdit.NoWrap
     readOnly: true
+    selectByKeyboard: true
+    selectByMouse: true
 }

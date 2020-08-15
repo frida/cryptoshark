@@ -1,6 +1,5 @@
 import QtQuick 2.0
-import QtQuick.Controls 1.2
-import QtQuick.Layouts 1.1
+import QtQuick.Controls 2.3
 
 Item {
     signal attach()
@@ -11,7 +10,7 @@ Item {
 
         Label {
             id: message
-            text: qsTr("Not currently attached to any process")
+            text: qsTr("Not currently attached to any process.")
         }
 
         Item {

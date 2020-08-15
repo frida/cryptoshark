@@ -3,14 +3,9 @@
 #include <QJsonObject>
 
 static const int IdRole = Qt::UserRole + 0;
-static const int NameRole = Qt::UserRole + 1;
-static const int PathRole = Qt::UserRole + 2;
-static const int BaseRole = Qt::UserRole + 3;
-static const int MainRole = Qt::UserRole + 4;
-static const int CallsRole = Qt::UserRole + 5;
 
 Modules::Modules(QObject *parent, QSqlDatabase db) :
-    QAbstractListModel(parent),
+    QAbstractTableModel(parent),
     m_database(db)
 {
     db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS modules ( \
@@ -40,12 +35,8 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
         m_moduleByName[name] = module;
     }
 
+    m_roleNames[Qt::DisplayRole] = QStringLiteral("display").toUtf8();
     m_roleNames[IdRole] = QStringLiteral("id").toUtf8();
-    m_roleNames[NameRole] = QStringLiteral("name").toUtf8();
-    m_roleNames[PathRole] = QStringLiteral("path").toUtf8();
-    m_roleNames[BaseRole] = QStringLiteral("base").toUtf8();
-    m_roleNames[MainRole] = QStringLiteral("main").toUtf8();
-    m_roleNames[CallsRole] = QStringLiteral("calls").toUtf8();
 
     m_insert.prepare(QStringLiteral("INSERT INTO modules (name, path, base, main) VALUES (?, ?, ?, ?)"));
     m_insert.setForwardOnly(true);
@@ -84,20 +75,10 @@ void Modules::update(QJsonArray modules)
             m_update.exec();
             m_update.finish();
 
-            bool notifyView = module->calls() > 0;
-
             module->m_path = path;
             emit module->pathChanged(path);
             module->m_base = base;
             emit module->baseChanged(base);
-
-            if (notifyView) {
-                auto i = index(m_modules.indexOf(module));
-                QVector<int> roles;
-                roles << PathRole;
-                roles << BaseRole;
-                emit dataChanged(i, i, roles);
-            }
         } else {
             m_insert.addBindValue(name);
             m_insert.addBindValue(path);
@@ -136,10 +117,9 @@ void Modules::addCalls(QHash<int, int> calls)
 
         if (alreadyInserted) {
             auto row = m_modules.indexOf(module);
-            emit headerDataChanged(Qt::Vertical, row, row);
-            auto i = index(row);
+            auto i = index(row, 1);
             QVector<int> roles;
-            roles << CallsRole;
+            roles << Qt::DisplayRole;
             emit dataChanged(i, i, roles);
         } else {
             auto row = m_modules.size();
@@ -184,41 +164,21 @@ void Modules::sortByCallsDescending()
     emit layoutChanged(allParents, VerticalSortHint);
 }
 
-int Modules::rowCount(const QModelIndex &parent) const
-{
-    Q_UNUSED(parent);
-
-    return m_modules.size();
-}
-
 QVariant Modules::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    Q_UNUSED(section);
     Q_UNUSED(orientation);
 
     switch (role) {
     case Qt::DisplayRole:
-        return QStringLiteral("Name");
-    case IdRole:
-        return QStringLiteral("Id");
-    case NameRole:
-        return QStringLiteral("Name");
-    case PathRole:
-        return QStringLiteral("Path");
-    case BaseRole:
-        return QStringLiteral("Base");
-    case MainRole:
-        return QStringLiteral("Main");
-    case CallsRole:
-        return QStringLiteral("Calls");
+        return (section == 0) ? QStringLiteral("Name") : QStringLiteral("Calls");
     default:
         return QVariant();
     }
 }
 
-QVariant Modules::data(int i, QString roleName) const
+QVariant Modules::data(const QModelIndex &index, QString roleName) const
 {
-    return data(index(i), m_roleNames.key(roleName.toUtf8()));
+    return data(index, m_roleNames.key(roleName.toUtf8()));
 }
 
 QVariant Modules::data(const QModelIndex &index, int role) const
@@ -230,20 +190,16 @@ QVariant Modules::data(const QModelIndex &index, int role) const
 
     switch (role) {
     case Qt::DisplayRole:
-        return module->m_name;
+        switch (index.column()) {
+        case 0:
+            return module->m_name;
+        case 1:
+            return module->m_calls;
+        }
+        break;
     case IdRole:
         return module->m_id;
-    case NameRole:
-        return module->m_name;
-    case PathRole:
-        return module->m_path;
-    case BaseRole:
-        return module->m_base;
-    case MainRole:
-        return module->m_main;
-    case CallsRole:
-        return module->m_calls;
-    default:
-        return QVariant();
     }
+
+    return QVariant();
 }

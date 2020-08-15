@@ -1,18 +1,17 @@
-import QtQuick 2.2
-import QtQuick.Controls 1.2
-import QtQuick.Dialogs 1.2
-import QtQuick.Layouts 1.2
+import QtQuick 2.12
+import QtQuick.Controls 2.13 as Controls
+import Qt.labs.platform 1.1 as Labs
 import Frida 1.0
 
-Dialog {
+Controls.Dialog {
     id: dialog
 
     signal selected(var device, var process)
 
     function _emitSelected() {
-        var currentRow = processes.currentRow;
-        if (currentRow !== -1) {
-            selected(deviceModel.get(devices.currentRow), processModel.get(currentRow));
+        var currentIndex = processes.currentIndex;
+        if (currentIndex !== -1) {
+            selected(deviceModel.get(devices.currentIndex), processModel.get(currentIndex));
         }
     }
 
@@ -20,63 +19,46 @@ Dialog {
         _emitSelected();
     }
 
-    title: qsTr("Choose target process:")
-    modality: Qt.WindowModal
-    standardButtons: AbstractDialog.Ok | AbstractDialog.Cancel
+    width: parent.width - 50
+    height: parent.height - 20
+    anchors.centerIn: parent
 
-    SplitView {
+    title: qsTr("Choose target process:")
+    modal: true
+    standardButtons: Controls.Dialog.Ok | Controls.Dialog.Cancel
+
+    Controls.SplitView {
         anchors.fill: parent
 
-        TableView {
+        ListView {
             id: devices
 
-            TableViewColumn {
-                role: "icon"
-                width: 16
-                delegate: Image {
-                    source: styleData.value
-                    fillMode: Image.Pad
-                }
-            }
-            TableViewColumn {
-                role: "name"
-                title: "Name"
-                width: 100
+            Controls.SplitView.minimumWidth: 50
+            Controls.SplitView.preferredWidth: 150
+
+            delegate: Controls.ItemDelegate {
+                text: name
+                icon.source: model.icon
+                width: (parent !== null) ? parent.width : 50
+                highlighted: ListView.isCurrentItem
+                onClicked: devices.currentIndex = index
             }
 
             model: deviceModel
-
-            onRowCountChanged: {
-                if (rowCount > 0 && currentRow === -1) {
-                    selection.select(0);
-                    currentRow = 0;
-                }
-            }
         }
 
-        TableView {
+        ListView {
             id: processes
-            Layout.minimumWidth: 380
-            Layout.minimumHeight: 424
-            Layout.fillWidth: true
 
-            TableViewColumn {
-                role: "smallIcon"
-                width: 16
-                delegate: Image {
-                    source: styleData.value
-                    fillMode: Image.Pad
-                }
+            delegate: Controls.ItemDelegate {
+                text: name
+                icon.source: smallIcon
+                width: (parent !== null) ? parent.width : 50
+                highlighted: ListView.isCurrentItem
+                onClicked: processes.currentIndex = index
             }
-            TableViewColumn { role: "pid"; title: "Pid"; width: 50; }
-            TableViewColumn { role: "name"; title: "Name"; width: 290; }
 
             model: processModel
-
-            onActivated: {
-                dialog.close();
-                dialog._emitSelected();
-            }
         }
     }
 
@@ -86,7 +68,7 @@ Dialog {
 
     ProcessListModel {
         id: processModel
-        device: (devices.currentRow !== -1) ? deviceModel.get(devices.currentRow) : null
+        device: (devices.currentIndex !== -1) ? deviceModel.get(devices.currentIndex) : null
 
         onError: {
             processErrorDialog.text = message;
@@ -94,8 +76,7 @@ Dialog {
         }
     }
 
-    MessageDialog {
+    Labs.MessageDialog {
         id: processErrorDialog
-        icon: StandardIcon.Critical
     }
 }

@@ -4,18 +4,11 @@
 #include "../router.h"
 
 static const int IdRole = Qt::UserRole + 0;
-static const int NameRole = Qt::UserRole + 1;
-static const int ModuleRole = Qt::UserRole + 2;
-static const int OffsetRole = Qt::UserRole + 3;
-static const int ExportedRole = Qt::UserRole + 4;
-static const int CallsRole = Qt::UserRole + 5;
-static const int ProbeScriptRole = Qt::UserRole + 6;
-static const int StatusRole = Qt::UserRole + 16;
 
 QRegExp Functions::s_ignoredPrefixCharacters = QRegExp(QStringLiteral("(^lib)|([-_])|(\\.[\\w.]+$)"));
 
 Functions::Functions(QObject *parent, QSqlDatabase db) :
-    QAbstractListModel(parent),
+    QAbstractTableModel(parent),
     m_currentModuleId(-1),
     m_database(db)
 {
@@ -31,14 +24,8 @@ Functions::Functions(QObject *parent, QSqlDatabase db) :
     )"));
     db.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS functions_index ON functions(module, offset, calls, exported)"));
 
+    m_roleNames[Qt::DisplayRole] = QStringLiteral("display").toUtf8();
     m_roleNames[IdRole] = QStringLiteral("id").toUtf8();
-    m_roleNames[NameRole] = QStringLiteral("name").toUtf8();
-    m_roleNames[ModuleRole] = QStringLiteral("module").toUtf8();
-    m_roleNames[OffsetRole] = QStringLiteral("offset").toUtf8();
-    m_roleNames[ExportedRole] = QStringLiteral("exported").toUtf8();
-    m_roleNames[CallsRole] = QStringLiteral("calls").toUtf8();
-    m_roleNames[ProbeScriptRole] = QStringLiteral("probeScript").toUtf8();
-    m_roleNames[StatusRole] = QStringLiteral("status").toUtf8();
 
     m_getAll.prepare(QStringLiteral("SELECT * FROM functions WHERE module = ? AND calls > 0 ORDER BY calls DESC"));
     m_getAll.setForwardOnly(true);
@@ -111,7 +98,7 @@ bool Functions::updateName(int functionId, QString name)
         function->m_name = name;
         emit function->nameChanged(name);
 
-        notifyRowChange(function, NameRole);
+        notifyRowChange(function);
     }
     m_updateName.finish();
     return success;
@@ -126,7 +113,7 @@ void Functions::addProbe(int functionId)
     function->m_probeActive = true;
     emit function->probeActiveChanged(true);
 
-    notifyRowChange(function, StatusRole);
+    notifyRowChange(function);
 
     QJsonObject payload;
     payload[QStringLiteral("id")] = function->id();
@@ -144,7 +131,7 @@ void Functions::removeProbe(int functionId)
     function->m_probeActive = false;
     emit function->probeActiveChanged(false);
 
-    notifyRowChange(function, StatusRole);
+    notifyRowChange(function);
 
     QJsonObject payload;
     payload[QStringLiteral("address")] = function->address();
@@ -164,7 +151,7 @@ void Functions::updateProbe(int functionId, QString script)
     function->m_probeScript = script;
     emit function->probeScriptChanged(script);
 
-    notifyRowChange(function, ProbeScriptRole);
+    notifyRowChange(function);
 
     if (function->m_probeActive) {
         QJsonObject payload;
@@ -289,11 +276,8 @@ void Functions::addCalls(QJsonObject summary)
             if (function->module()->id() == m_currentModuleId) {
                 auto row = m_functions.indexOf(function);
                 if (row != -1) {
-                    emit headerDataChanged(Qt::Vertical, row, row);
-                    auto i = index(row, 0);
-                    QVector<int> roles;
-                    roles << CallsRole;
-                    emit dataChanged(i, i, roles);
+                    auto i = index(row, 2);
+                    emit dataChanged(i, i);
                 } else {
                     row = m_functions.size();
                     beginInsertRows(noParent, row, row);
@@ -350,13 +334,6 @@ void Functions::sortByCallsDescending()
     emit layoutChanged(allParents, VerticalSortHint);
 }
 
-int Functions::rowCount(const QModelIndex &parent) const
-{
-    Q_UNUSED(parent);
-
-    return m_functions.size();
-}
-
 QVariant Functions::headerData(int section, Qt::Orientation orientation, int role) const
 {
     Q_UNUSED(section);
@@ -364,31 +341,22 @@ QVariant Functions::headerData(int section, Qt::Orientation orientation, int rol
 
     switch (role) {
     case Qt::DisplayRole:
-        return QStringLiteral("Name");
-    case IdRole:
-        return QStringLiteral("Id");
-    case NameRole:
-        return QStringLiteral("Name");
-    case ModuleRole:
-        return QStringLiteral("Module");
-    case OffsetRole:
-        return QStringLiteral("Offset");
-    case ExportedRole:
-        return QStringLiteral("Exported");
-    case CallsRole:
-        return QStringLiteral("Calls");
-    case ProbeScriptRole:
-        return QStringLiteral("Probe Script");
-    case StatusRole:
-        return QStringLiteral("Status");
+        switch (section) {
+        case 0:
+            return QStringLiteral("");
+        case 1:
+            return QStringLiteral("Function");
+        case 2:
+            return QStringLiteral("Calls");
+        }
     default:
         return QVariant();
     }
 }
 
-QVariant Functions::data(int i, QString roleName) const
+QVariant Functions::data(const QModelIndex &index, QString roleName) const
 {
-    return data(index(i), m_roleNames.key(roleName.toUtf8()));
+    return data(index, m_roleNames.key(roleName.toUtf8()));
 }
 
 QVariant Functions::data(const QModelIndex &index, int role) const
@@ -400,26 +368,20 @@ QVariant Functions::data(const QModelIndex &index, int role) const
 
     switch (role) {
     case Qt::DisplayRole:
-        return function->m_name;
+        switch (index.column()) {
+        case 0:
+            return function->m_probeActive ? QStringLiteral("P") : QStringLiteral("");
+        case 1:
+            return function->m_name;
+        case 2:
+            return function->m_calls;
+        }
+        break;
     case IdRole:
         return function->m_id;
-    case NameRole:
-        return function->m_name;
-    case ModuleRole:
-        return function->m_module->id();
-    case OffsetRole:
-        return function->m_offset;
-    case ExportedRole:
-        return function->m_exported;
-    case CallsRole:
-        return function->m_calls;
-    case ProbeScriptRole:
-        return function->m_probeScript;
-    case StatusRole:
-        return function->m_probeActive ? QStringLiteral("P") : QStringLiteral("");
-    default:
-        return QVariant();
     }
+
+    return QVariant();
 }
 
 void Functions::addLogMessage(int functionId, QString message)
@@ -482,10 +444,7 @@ void Functions::importModuleExports(QList<int> moduleIds)
                         function->m_exported = true;
                         emit function->exportedChanged(true);
 
-                        QVector<int> roles;
-                        roles << NameRole;
-                        roles << ExportedRole;
-                        notifyRowChange(function, roles);
+                        notifyRowChange(function);
                     } else {
                         bool exported = true;
                         m_insert.addBindValue(name);
@@ -524,14 +483,7 @@ Function *Functions::createFunctionFromQuery(QSqlQuery query)
     return new Function(this, id, name, module, offset, exported, calls, probeScript);
 }
 
-void Functions::notifyRowChange(Function *function, int role)
-{
-    QVector<int> roles;
-    roles << role;
-    notifyRowChange(function, roles);
-}
-
-void Functions::notifyRowChange(Function *function, QVector<int> roles)
+void Functions::notifyRowChange(Function *function)
 {
     if (function->module()->id() != m_currentModuleId) {
         return;
@@ -539,8 +491,9 @@ void Functions::notifyRowChange(Function *function, QVector<int> roles)
 
     auto row = m_functions.indexOf(function);
     if (row != -1) {
-        auto i = index(row);
-        emit dataChanged(i, i, roles);
+        auto topLeft = index(row, 0);
+        auto bottomRight = index(row, 2);
+        emit dataChanged(topLeft, bottomRight);
     }
 }
 

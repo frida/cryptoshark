@@ -8,5 +8,6 @@
         <file>ui/components/DisassemblyView.qml</file>
         <file>ui/components/ProcessDialog.qml</file>
         <file>ui/components/FunctionDialog.qml</file>
+        <file>ui/components/SimpleTableView.qml</file>
     </qresource>
 </RCC>

@@ -1,9 +1,9 @@
 import Cryptoshark 1.0
 
-import QtQuick 2.2
-import QtQuick.Controls 1.2
-import QtQuick.Dialogs 1.2
-import QtQuick.Window 2.0
+import QtQuick 2.0
+import QtQuick.Controls 2.3
+import Qt.labs.platform 1.1
+import Qt.labs.qmlmodels 1.0
 import Frida 1.0
 
 import "components"
@@ -45,7 +45,7 @@ ApplicationWindow {
     height: 480
     visible: true
 
-    menuBar: MenuBar {
+    MenuBar {
         Menu {
             title: qsTr("File")
             MenuItem {
@@ -77,21 +77,21 @@ ApplicationWindow {
 
         states: [
             State {
-                name: 'detached'
+                name: "detached"
                 when: agent.instances.length === 0 || agent.instances[0].status > 5
                 PropertyChanges { target: attach; enabled: true }
                 PropertyChanges { target: detach; enabled: false }
                 PropertyChanges { target: loader; sourceComponent: detachedComponent }
             },
             State {
-                name: 'attaching'
+                name: "attaching"
                 when: !_models || (agent.instances.length > 0 && agent.instances[0].status < 5)
                 PropertyChanges { target: attach; enabled: false }
                 PropertyChanges { target: detach; enabled: false }
                 PropertyChanges { target: loader; sourceComponent: attachingComponent }
             },
             State {
-                name: 'attached'
+                name: "attached"
                 when: agent.instances.length > 0 && agent.instances[0].status === 5
                 PropertyChanges { target: attach; enabled: false }
                 PropertyChanges { target: detach; enabled: true }
@@ -144,11 +144,14 @@ ApplicationWindow {
 
     MessageDialog {
         id: errorDialog
-        icon: StandardIcon.Critical;
     }
 
-    ListModel {
+    TableModel {
         id: _threadsModel
+
+        TableModelColumn { display: "status" }
+        TableModelColumn { display: "id" }
+        TableModelColumn { display: "tags" }
     }
 
     Script {
@@ -170,15 +173,15 @@ ApplicationWindow {
         }
 
         function follow(threadId, callback) {
-            _request('thread:follow', { id: threadId }, callback);
+            _request("thread:follow", { id: threadId }, callback);
         }
 
         function unfollow(threadId, callback) {
-            _request('thread:unfollow', { id: threadId }, callback);
+            _request("thread:unfollow", { id: threadId }, callback);
         }
 
         function disassemble(address, callback) {
-            _request('function:disassemble', { address: address }, callback);
+            _request("function:disassemble", { address: address }, callback);
         }
 
         function _request(name, payload, callback) {
@@ -186,7 +189,7 @@ ApplicationWindow {
                 callback = _noop;
             }
 
-            var id = 'a' + _nextRequestId++;
+            var id = "a" + _nextRequestId++;
             _requests[id] = callback;
             post({ id: id, name: name, payload: payload });
         }
@@ -196,7 +199,7 @@ ApplicationWindow {
             delete _requests[id];
 
             var result, error;
-            if (type === 'result') {
+            if (type === "result") {
                 result = payload;
                 error = null;
             } else {
@@ -210,46 +213,46 @@ ApplicationWindow {
 
         function _onThreadsUpdate(updatedThreads) {
             _threadsModel.clear();
-            updatedThreads.forEach(function (thread) {
-                _threadsModel.append({id: thread.id, tags: thread.tags.join(', '), status: ''});
+            updatedThreads.forEach(thread => {
+                _threadsModel.appendRow({ id: thread.id, tags: thread.tags.join(", "), status: "" });
             });
         }
 
         function _onThreadUpdate(updatedThread) {
             var updatedThreadId = updatedThread.id;
-            var count = _threadsModel.count;
-            for (var i = 0; i !== count; i++) {
-                var thread = _threadsModel.get(i);
+            var i = 0;
+            for (const thread of _threadsModel.rows) {
                 if (thread.id === updatedThreadId) {
-                    _threadsModel.setProperty(i, 'tags', updatedThread.tags.join(', '));
+                    _threadsModel.setData(_threadsModel.index(i, 2), "display", updatedThread.tags.join(", "));
                     break;
                 }
+                i++;
             }
         }
 
         function _onMessage(object) {
-            if (object.type === 'send') {
+            if (object.type === "send") {
                 var stanza = object.payload;
                 var name = stanza.name;
                 var payload = stanza.payload;
 
                 switch (name) {
-                    case 'threads:update':
+                    case "threads:update":
                         _onThreadsUpdate(payload);
                         break;
-                    case 'thread:update':
+                    case "thread:update":
                         _onThreadUpdate(payload);
                         break;
-                    case 'result':
-                    case 'error':
+                    case "result":
+                    case "error":
                         _onResponse(stanza.id, name, payload);
                         break;
                     default:
-                         console.log('Unhandled: ' + JSON.stringify(stanza));
+                         console.log("Unhandled: " + JSON.stringify(stanza));
                          break;
                 }
             } else {
-                console.log('ERROR: ' + JSON.stringify(object));
+                console.log("ERROR: " + JSON.stringify(object));
             }
         }
 

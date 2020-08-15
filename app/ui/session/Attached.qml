@@ -1,8 +1,7 @@
 import Cryptoshark 1.0
 
-import QtQuick 2.0
-import QtQuick.Controls 1.2
-import QtQuick.Controls.Styles 1.1
+import QtQuick 2.12
+import QtQuick.Controls 2.13
 import QtQuick.Layouts 1.1
 
 import "../components"
@@ -25,10 +24,8 @@ SplitView {
     onCurrentModuleChanged: {
         models.functions.load(currentModule !== null ? currentModule.id : -1);
         functionsView.currentRow = -1;
-        functionsView.selection.clear();
         if (currentModule !== null) {
             functionsView.currentRow = 0;
-            functionsView.selection.select(0);
         }
     }
 
@@ -49,113 +46,191 @@ SplitView {
     orientation: Qt.Horizontal
 
     Item {
-        width: sidebar.implicitWidth
-        Layout.minimumWidth: 5
+        SplitView.preferredWidth: 250
+        SplitView.minimumWidth: 50
+
+        onWidthChanged: {
+            threadsView.forceLayout();
+            modulesView.forceLayout();
+            functionsView.forceLayout();
+        }
 
         ColumnLayout {
             id: sidebar
-            spacing: 5
+            anchors.fill: parent
+            spacing: 0
 
-            anchors {
-                fill: parent
-                margins: 1
-            }
-
-            TableView {
-                id: threadsView
+            Rectangle {
+                height: 210
                 Layout.fillWidth: true
 
-                TableViewColumn { role: "status"; title: ""; width: 20 }
-                TableViewColumn { role: "id"; title: "Thread ID"; width: 63 }
-                TableViewColumn { role: "tags"; title: "Tags"; width: 100 }
-            }
-            Row {
-                Layout.fillWidth: true
+                border {
+                    width: 1
+                    color:  "#666"
+                }
 
-                Button {
-                    property string _action: !!threadsModel && threadsModel.get(threadsView.currentRow) && threadsModel.get(threadsView.currentRow).status === 'F' ? 'unfollow' : 'follow'
-                    text: _action === 'follow' ? qsTr("Follow") : qsTr("Unfollow")
-                    enabled: !!threadsModel && threadsModel.get(threadsView.currentRow) !== undefined
-                    onClicked: {
-                        var index = threadsView.currentRow;
-                        if (_action === 'follow') {
-                            threadsModel.setProperty(index, 'status', 'F');
-                            agentService.follow(threadsModel.get(index).id);
-                        } else {
-                            threadsModel.setProperty(index, 'status', '');
-                            agentService.unfollow(threadsModel.get(index).id);
+                color: "#ccc"
+
+                ColumnLayout {
+                    x: 1
+                    y: 1
+                    width: parent.width - 2
+                    height: parent.height - 2
+
+                    SimpleTableView {
+                        id: threadsView
+
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        columnTitles: ["", qsTr("Thread ID"), qsTr("Tags")]
+                        columnWidths: [20, 63, -1]
+                    }
+                    Row {
+                        leftPadding: 5
+                        rightPadding: 5
+                        bottomPadding: 5
+
+                        Button {
+                            id: followButton
+
+                            property string _action: typeof _forcedUpdates === "number" &&
+                                                     (threadsView.currentRow !== -1 && threadsModel !== null &&
+                                                      threadsModel.getRow(threadsView.currentRow).status === "F")
+                                                     ? "unfollow" : "follow"
+                            property int _forcedUpdates: 0
+
+                            text: (_action === "follow") ? qsTr("Follow") : qsTr("Unfollow")
+                            enabled: threadsView.currentRow !== -1 && threadsModel !== null
+
+                            onClicked: {
+                                var row = threadsView.currentRow;
+                                var index = threadsModel.index(row, 0);
+                                var thread = threadsModel.getRow(row);
+
+                                if (_action === "follow") {
+                                    threadsModel.setData(index, "display", "F");
+                                    agentService.follow(thread.id);
+                                } else {
+                                    threadsModel.setData(index, "display", "");
+                                    agentService.unfollow(thread.id);
+                                }
+
+                                _forcedUpdates++;
+                            }
                         }
                     }
                 }
             }
-            TableView {
-                id: modulesView
 
-                onCurrentRowChanged: {
-                    var currentId = model.data(currentRow, 'id') || null;
-                    if (currentId !== null) {
-                        if (currentModule === null || currentModule.id !== currentId) {
-                            currentModule = model.getById(currentId);
-                        }
-                    } else if (currentModule !== null) {
-                        currentModule = null;
-                    }
-                }
-
-                model: models.modules
+            Rectangle {
+                height: 150
                 Layout.fillWidth: true
 
-                TableViewColumn { role: "name"; title: "Module"; width: 83 }
-                TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
-            }
-            TableView {
-                id: functionsView
+                border {
+                    width: 1
+                    color:  "#666"
+                }
 
-                onCurrentRowChanged: {
-                    var currentId = model.data(currentRow, 'id') || null;
-                    if (currentId !== null) {
-                        if (currentFunction === null || currentFunction.id !== currentId) {
-                            var id = model.data(currentRow, 'id');
-                            currentFunction = model.getById(currentId);
+                color: "#ccc"
+
+                SimpleTableView {
+                    id: modulesView
+
+                    model: models.modules
+
+                    x: 1
+                    y: 1
+                    width: parent.width - 2
+                    height: parent.height - 2
+
+                    columnTitles: [qsTr("Name"), qsTr("Calls")]
+                    columnWidths: [-1, 80]
+
+                    onCurrentRowChanged: {
+                        var currentId = model.data(model.index(currentRow, 0), "id") || null;
+                        if (currentId !== null) {
+                            if (currentModule === null || currentModule.id !== currentId) {
+                                currentModule = model.getById(currentId);
+                            }
+                        } else if (currentModule !== null) {
+                            currentModule = null;
                         }
-                    } else if (currentFunction !== null) {
-                        currentFunction = null;
                     }
                 }
+            }
 
-                onActivated: {
-                    functionDialog.functionId = currentFunction.id;
-                    functionDialog.open();
-                }
-
-                model: models.functions
+            Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                TableViewColumn { role: "status"; title: ""; width: 20 }
-                TableViewColumn { role: "name"; title: "Function"; width: 83 }
-                TableViewColumn { role: "calls"; title: "Calls"; width: 63 }
-            }
-            Row {
-                Layout.fillWidth: true
+                border {
+                    width: 1
+                    color:  "#666"
+                }
 
-                Button {
-                    property string _action: !!currentFunction && currentFunction.probeActive ? 'remove' : 'add'
-                    text: _action === 'add' ? qsTr("Add Probe") : qsTr("Remove Probe")
-                    enabled: !!currentFunction
-                    onClicked: {
-                        if (_action === 'add') {
-                            models.functions.addProbe(currentFunction.id);
-                        } else {
-                            models.functions.removeProbe(currentFunction.id);
+                color: "#ccc"
+
+                ColumnLayout {
+                    x: 1
+                    y: 1
+                    width: parent.width - 2
+                    height: parent.height - 2
+
+                    SimpleTableView {
+                        id: functionsView
+
+                        model: models.functions
+
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        columnTitles: ["", qsTr("Function"), qsTr("Calls")]
+                        columnWidths: [20, 83, -1]
+
+                        onCurrentRowChanged: {
+                            var currentId = model.data(model.index(currentRow, 0), "id") || null;
+                            if (currentId !== null) {
+                                if (currentFunction === null || currentFunction.id !== currentId) {
+                                    currentFunction = model.getById(currentId);
+                                }
+                            } else if (currentFunction !== null) {
+                                currentFunction = null;
+                            }
+                        }
+
+                        onActivated: {
+                            functionDialog.functionId = currentFunction.id;
+                            functionDialog.open();
                         }
                     }
-                }
-                Button {
-                    text: qsTr("Resolve Symbols")
-                    enabled: !!currentModule
-                    onClicked:  {
-                        models.functions.resolveSymbols(currentModule.id);
+                    RowLayout {
+                        Layout.rightMargin: 5
+                        Layout.bottomMargin: 5
+                        Layout.leftMargin: 5
+
+                        Button {
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 150
+                            property string _action: currentFunction !== null && currentFunction.probeActive ? "remove" : "add"
+                            text: _action === "add" ? qsTr("Add Probe") : qsTr("Remove Probe")
+                            enabled: currentFunction !== null
+                            onClicked: {
+                                if (_action === "add") {
+                                    models.functions.addProbe(currentFunction.id);
+                                } else {
+                                    models.functions.removeProbe(currentFunction.id);
+                                }
+                            }
+                        }
+                        Button {
+                            text: qsTr("Resolve Symbols")
+                            enabled: currentModule !== null
+
+                            onClicked:  {
+                                models.functions.resolveSymbols(currentModule.id);
+                            }
+                        }
                     }
                 }
             }
@@ -167,8 +242,8 @@ SplitView {
 
         DisassemblyView {
             id: disassembly
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            SplitView.fillWidth: true
+            SplitView.fillHeight: true
         }
 
         TextArea {
@@ -207,15 +282,17 @@ SplitView {
                 functionDialog.open();
             }
 
-            Layout.fillWidth: true
-            Layout.minimumHeight: 200
-            style: TextAreaStyle {
-                backgroundColor: "#060606"
+            SplitView.fillWidth: true
+            SplitView.minimumHeight: 200
+            background: Rectangle {
+                color: "#060606"
             }
-            font.family: fixedFont
+            font: fixedFont
             textFormat: TextEdit.RichText
             wrapMode: TextEdit.NoWrap
             readOnly: true
+            selectByKeyboard: true
+            selectByMouse: true
         }
     }
 }

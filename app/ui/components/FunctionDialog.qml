@@ -1,6 +1,5 @@
 import QtQuick 2.2
-import QtQuick.Controls 1.2
-import QtQuick.Dialogs 1.2
+import QtQuick.Controls 2.3
 import QtQuick.Layouts 1.1
 
 Dialog {
@@ -39,8 +38,8 @@ Dialog {
     width: 564
     height: 350
     title: qsTr("Edit function")
-    modality: Qt.WindowModal
-    standardButtons: AbstractDialog.Save | AbstractDialog.Cancel
+    modal: true
+    standardButtons: Dialog.Save | Dialog.Cancel
 
     ColumnLayout {
         width: parent.width
@@ -65,7 +64,7 @@ Dialog {
                 id: script
 
                 anchors.fill: parent
-                font.family: fixedFont
+                font: fixedFont
                 textFormat: TextEdit.PlainText
                 wrapMode: TextEdit.NoWrap
             }

@@ -3,7 +3,7 @@
 
 #include "modules.h"
 
-#include <QAbstractListModel>
+#include <QAbstractTableModel>
 #include <QHash>
 #include <QJsonObject>
 #include <QRegExp>
@@ -12,7 +12,7 @@
 
 class Function;
 
-class Functions : public QAbstractListModel
+class Functions : public QAbstractTableModel
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(Functions)
@@ -35,11 +35,15 @@ public:
     void addCalls(QJsonObject summary);
     void addLogMessage(int functionId, QString message);
 
-    QHash<int, QByteArray> roleNames() const { return m_roleNames; }
-    int rowCount(const QModelIndex &parent = QModelIndex()) const;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-    Q_INVOKABLE QVariant data(int i, QString roleName) const;
-    Q_INVOKABLE QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
+    QHash<int, QByteArray> roleNames() const override { return m_roleNames; }
+    int rowCount(const QModelIndex &) const override { return m_functions.size(); }
+    int columnCount(const QModelIndex &) const override { return 3; }
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+    Q_INVOKABLE QVariant data(const QModelIndex &index, QString roleName) const;
+    Q_INVOKABLE QVariant data(const QModelIndex &index, int role) const override;
+    Qt::ItemFlags flags(const QModelIndex &) const override {
+        return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren;
+    }
 
 signals:
     void logMessage(Function *function, QString message);
@@ -48,8 +52,7 @@ private:
     void sortByCallsDescending();
     void importModuleExports(QList<int> moduleIds);
     Function *createFunctionFromQuery(QSqlQuery query);
-    void notifyRowChange(Function *function, int role);
-    void notifyRowChange(Function *function, QVector<int> roles);
+    void notifyRowChange(Function *function);
     static QString functionName(Module *module, int offset);
     static QString functionPrefix(Module *module);
 

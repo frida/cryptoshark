@@ -5,7 +5,14 @@
 #include <QApplication>
 #include <QFontDatabase>
 #include <QQmlApplicationEngine>
+#include <QQuickStyle>
 #include <QtQml>
+
+#ifdef Q_OS_WINDOWS
+# define CRYPTOSHARK_STYLE "Universal"
+#else
+# define CRYPTOSHARK_STYLE "Fusion"
+#endif
 
 static QObject *createRouterSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
@@ -36,6 +43,7 @@ int main(int argc, char *argv[])
 #ifdef CRYPTOSHARK_STATIC_QT
     QApplication::setLibraryPaths(QStringList());
 #endif
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
 
     qRegisterMetaType<Modules *>("Modules *");
@@ -46,6 +54,8 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<NativePointer>("Cryptoshark", 1, 0, "Router", createRouterSingleton);
     qmlRegisterSingletonType<NativePointer>("Cryptoshark", 1, 0, "Models", createModelsSingleton);
     qmlRegisterSingletonType<NativePointer>("Cryptoshark", 1, 0, "NativePointer", createNativePointerSingleton);
+
+    QQuickStyle::setStyle(CRYPTOSHARK_STYLE);
 
     QQmlApplicationEngine engine;
     auto fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);

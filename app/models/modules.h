@@ -1,14 +1,14 @@
 #ifndef MODULES_H
 #define MODULES_H
 
-#include <QAbstractListModel>
+#include <QAbstractTableModel>
 #include <QHash>
 #include <QJsonArray>
 #include <QSqlQuery>
 
 class Module;
 
-class Modules : public QAbstractListModel
+class Modules : public QAbstractTableModel
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(Modules)
@@ -22,11 +22,15 @@ public:
     void update(QJsonArray modules);
     void addCalls(QHash<int, int> calls);
 
-    QHash<int, QByteArray> roleNames() const { return m_roleNames; }
-    int rowCount(const QModelIndex &parent = QModelIndex()) const;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-    Q_INVOKABLE QVariant data(int i, QString roleName) const;
-    Q_INVOKABLE QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
+    QHash<int, QByteArray> roleNames() const override { return m_roleNames; }
+    int rowCount(const QModelIndex &) const override { return m_modules.size(); }
+    int columnCount(const QModelIndex &) const override { return 2; }
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+    Q_INVOKABLE QVariant data(const QModelIndex &index, QString roleName) const;
+    QVariant data(const QModelIndex &index, int role) const override;
+    Qt::ItemFlags flags(const QModelIndex &) const override {
+        return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren;
+    }
 
 private:
     void sortByCallsDescending();
