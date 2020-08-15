@@ -8,14 +8,12 @@ Controls.Dialog {
 
     signal selected(var device, var process)
 
-    function _emitSelected() {
+    onAccepted: {
         var currentIndex = processes.currentIndex;
         if (currentIndex !== -1) {
             selected(deviceModel.get(devices.currentIndex), processModel.get(currentIndex));
         }
     }
-
-    onAccepted: _emitSelected()
 
     width: parent.width - 50
     height: parent.height - 20
