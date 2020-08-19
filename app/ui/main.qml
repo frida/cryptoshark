@@ -9,9 +9,6 @@ import Frida 1.0
 import "components"
 import "session"
 
-// qmlimportscanner needs to see this one for static linking:
-import QtQuick.PrivateWidgets 1.1
-
 ApplicationWindow {
     id: app
 
