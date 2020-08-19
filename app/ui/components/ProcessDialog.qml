@@ -8,6 +8,12 @@ Controls.Dialog {
 
     signal selected(var device, var process)
 
+    onOpened: {
+        if (processModel.count !== 0) {
+            processModel.refresh();
+        }
+    }
+
     onAccepted: {
         var currentIndex = processes.currentIndex;
         if (currentIndex !== -1) {
@@ -29,8 +35,11 @@ Controls.Dialog {
         ListView {
             id: devices
 
+            model: deviceModel
+
             Controls.SplitView.minimumWidth: 50
             Controls.SplitView.preferredWidth: 150
+            boundsBehavior: Flickable.StopAtBounds
 
             delegate: Controls.ItemDelegate {
                 text: name
@@ -39,12 +48,14 @@ Controls.Dialog {
                 highlighted: ListView.isCurrentItem
                 onClicked: devices.currentIndex = index
             }
-
-            model: deviceModel
         }
 
         ListView {
             id: processes
+
+            model: processModel
+
+            boundsBehavior: Flickable.StopAtBounds
 
             delegate: Controls.ItemDelegate {
                 text: name
@@ -54,8 +65,6 @@ Controls.Dialog {
                 onClicked: processes.currentIndex = index
                 onDoubleClicked: dialog.accept()
             }
-
-            model: processModel
         }
     }
 

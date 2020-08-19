@@ -1,29 +1,32 @@
 import QtQuick 2.0
 import QtQuick.Controls 2.3
+import QtQuick.Layouts 1.1
 
 Item {
     signal attach()
+    signal spawn()
 
-    Column {
+    ColumnLayout {
         anchors.centerIn: parent
         spacing: 10
 
         Label {
-            id: message
             text: qsTr("Not currently attached to any process.")
         }
 
-        Item {
-            width: message.implicitWidth
-            height: action.implicitHeight
-            Button {
-                id: action
-                anchors.centerIn: parent
-                text: qsTr("Attach")
-                onClicked: {
-                    attach();
-                }
-            }
+        Button {
+            text: qsTr("Attach")
+            onClicked: attach()
+
+            Layout.topMargin: 5
+            Layout.alignment: Qt.AlignCenter
+        }
+
+        Button {
+            text: qsTr("Spawn")
+            onClicked: spawn()
+
+            Layout.alignment: Qt.AlignCenter
         }
     }
 }

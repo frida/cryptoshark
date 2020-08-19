@@ -9,5 +9,7 @@
         <file>ui/components/ProcessDialog.qml</file>
         <file>ui/components/FunctionDialog.qml</file>
         <file>ui/components/SimpleTableView.qml</file>
+        <file>ui/components/ProgramDialog.qml</file>
+        <file>ui/components/StringVectorEditor.qml</file>
     </qresource>
 </RCC>

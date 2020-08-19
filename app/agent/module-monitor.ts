@@ -3,7 +3,7 @@ import { Service } from "./interfaces";
 export class ModuleMonitor implements Service {
     handlers = {
         "module:get-functions": this.getFunctions,
-        "module:resolve-symbols": this.resolveSymbols
+        "module:symbolicate": this.symbolicate
     };
 
     constructor(private moduleMap: ModuleMap) {
@@ -42,7 +42,7 @@ export class ModuleMonitor implements Service {
             .map(e => [e.name, e.address.sub(base).toInt32()]);
     }
 
-    resolveSymbols({ module, offsets }: ResolveSymbolsQuery): ResolveSymbolsResult[] {
+    symbolicate({ module, offsets }: ResolveSymbolsQuery): ResolveSymbolsResult[] {
         const m = find(this.moduleMap.values(), m => m.path === module);
         if (m === undefined) {
             throw new Error(`Module “${module}” not in map`);

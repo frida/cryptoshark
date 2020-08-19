@@ -15,27 +15,38 @@ import QtQuick.PrivateWidgets 1.1
 ApplicationWindow {
     id: app
 
-    property var _process: null
+    property var _state: "detached"
+    property var _endReason: null
     property var _models: null
 
-    Component.onCompleted: {
-        processDialog.open();
+    function spawn(device, program, options) {
+        _endReason = null;
+
+        let name = program;
+        const slashStart = name.lastIndexOf("/");
+        if (slashStart !== -1) {
+            name = program.substr(slashStart + 1);
+        }
+        Models.open(name);
+        _models = Models;
+
+        device.inject(agent, program, options);
     }
 
     function attach(device, process) {
-        if (_process !== null && process.pid === _process.pid) {
-            return;
-        }
-        _process = process;
+        _endReason = null;
+
         Models.open(process.name);
         _models = Models;
+
         device.inject(agent, process.pid);
     }
 
-    function detach() {
+    function endSession() {
         loader.item.dispose();
-        agent.instances[0].stop();
-        _process = null;
+        if (agent.instances.length > 0)
+            agent.instances[0].stop();
+        _endReason = null;
         _models.close();
         _models = null;
     }
@@ -49,18 +60,19 @@ ApplicationWindow {
         Menu {
             title: qsTr("File")
             MenuItem {
-                id: attach
-                text: qsTr("Attach")
-                onTriggered: {
-                    processDialog.open();
-                }
+                id: attachItem
+                text: qsTr("Attach…")
+                onTriggered: processDialog.open()
             }
             MenuItem {
-                id: detach
-                text: qsTr("Detach")
-                onTriggered: {
-                    app.detach();
-                }
+                id: spawnItem
+                text: qsTr("Spawn…")
+                onTriggered: programDialog.open()
+            }
+            MenuItem {
+                id: closeItem
+                text: qsTr("Close")
+                onTriggered: app.endSession()
             }
             MenuItem {
                 text: qsTr("Exit")
@@ -78,23 +90,30 @@ ApplicationWindow {
         states: [
             State {
                 name: "detached"
-                when: agent.instances.length === 0 || agent.instances[0].status > 5
-                PropertyChanges { target: attach; enabled: true }
-                PropertyChanges { target: detach; enabled: false }
+                when: _models === null
+                PropertyChanges { target: app; _state: "detached" }
+                PropertyChanges { target: attachItem; enabled: true }
+                PropertyChanges { target: spawnItem; enabled: true }
+                PropertyChanges { target: closeItem; enabled: false }
                 PropertyChanges { target: loader; sourceComponent: detachedComponent }
             },
             State {
                 name: "attaching"
-                when: !_models || (agent.instances.length > 0 && agent.instances[0].status < 5)
-                PropertyChanges { target: attach; enabled: false }
-                PropertyChanges { target: detach; enabled: false }
+                when: agent.instances.length > 0 && agent.instances[0].status < ScriptInstance.Status.Started
+                PropertyChanges { target: app; _state: "attaching" }
+                PropertyChanges { target: attachItem; enabled: false }
+                PropertyChanges { target: spawnItem; enabled: false }
+                PropertyChanges { target: closeItem; enabled: false }
                 PropertyChanges { target: loader; sourceComponent: attachingComponent }
             },
             State {
                 name: "attached"
-                when: agent.instances.length > 0 && agent.instances[0].status === 5
-                PropertyChanges { target: attach; enabled: false }
-                PropertyChanges { target: detach; enabled: true }
+                when: (agent.instances.length > 0 && agent.instances[0].status === ScriptInstance.Status.Started) ||
+                      (agent.instances.length === 0 && _models !== null)
+                PropertyChanges { target: app; _state: "attached" }
+                PropertyChanges { target: attachItem; enabled: false }
+                PropertyChanges { target: spawnItem; enabled: false }
+                PropertyChanges { target: closeItem; enabled: true }
                 PropertyChanges { target: loader; sourceComponent: attachedComponent }
             }
         ]
@@ -104,9 +123,8 @@ ApplicationWindow {
         id: detachedComponent
 
         Detached {
-            onAttach: {
-                processDialog.open();
-           }
+            onAttach: processDialog.open()
+            onSpawn: programDialog.open()
         }
     }
 
@@ -121,6 +139,7 @@ ApplicationWindow {
         id: attachedComponent
 
         Attached {
+            endReason: _endReason
             agentService: agent
             threadsModel: _threadsModel
             models: _models
@@ -128,22 +147,22 @@ ApplicationWindow {
         }
     }
 
+    ProgramDialog {
+        id: programDialog
+
+        onSelected: app.spawn(device, program, options)
+    }
+
     ProcessDialog {
         id: processDialog
 
-        onSelected: {
-            app.attach(device, process);
-        }
+        onSelected: app.attach(device, process)
     }
 
     FunctionDialog {
         id: funcDialog
 
         models: _models
-    }
-
-    MessageDialog {
-        id: errorDialog
     }
 
     TableModel {
@@ -168,8 +187,7 @@ ApplicationWindow {
         }
 
         onError: {
-            errorDialog.text = message;
-            errorDialog.open();
+            _endReason = message;
         }
 
         function follow(threadId, callback) {
@@ -189,13 +207,13 @@ ApplicationWindow {
                 callback = _noop;
             }
 
-            var id = "a" + _nextRequestId++;
+            const id = "a" + _nextRequestId++;
             _requests[id] = callback;
             post({ id: id, name: name, payload: payload });
         }
 
         function _onResponse(id, type, payload) {
-            var callback = _requests[id];
+            const callback = _requests[id];
             delete _requests[id];
 
             var result, error;
@@ -219,8 +237,8 @@ ApplicationWindow {
         }
 
         function _onThreadUpdate(updatedThread) {
-            var updatedThreadId = updatedThread.id;
-            var i = 0;
+            const updatedThreadId = updatedThread.id;
+            let i = 0;
             for (const thread of _threadsModel.rows) {
                 if (thread.id === updatedThreadId) {
                     _threadsModel.setData(_threadsModel.index(i, 2), "display", updatedThread.tags.join(", "));
@@ -232,9 +250,9 @@ ApplicationWindow {
 
         function _onMessage(object) {
             if (object.type === "send") {
-                var stanza = object.payload;
-                var name = stanza.name;
-                var payload = stanza.payload;
+                const stanza = object.payload;
+                const name = stanza.name;
+                const payload = stanza.payload;
 
                 switch (name) {
                     case "threads:update":

@@ -12,6 +12,7 @@ TableView {
     topMargin: 21
     ScrollBar.vertical: ScrollBar {}
     clip: true
+    boundsBehavior: Flickable.StopAtBounds
 
     columnWidthProvider: function (column) {
         var width = columnWidths[column];

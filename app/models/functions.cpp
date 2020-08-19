@@ -161,7 +161,7 @@ void Functions::updateProbe(int functionId, QString script)
     }
 }
 
-void Functions::resolveSymbols(int moduleId)
+void Functions::symbolicate(int moduleId)
 {
     auto router = Router::instance();
 
@@ -185,7 +185,7 @@ void Functions::resolveSymbols(int moduleId)
     m_getUnexported.finish();
     payload[QStringLiteral("offsets")] = offsets;
 
-    auto request = router->request(QStringLiteral("module:resolve-symbols"), payload);
+    auto request = router->request(QStringLiteral("module:symbolicate"), payload);
     QObject::connect(request, &Request::completed, [=] (QJsonValue result, RequestError *error) {
         if (error != nullptr)
             return;

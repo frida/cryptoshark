@@ -3,6 +3,7 @@ import Cryptoshark 1.0
 import QtQuick 2.12
 import QtQuick.Controls 2.13
 import QtQuick.Layouts 1.1
+import Frida 1.0
 
 import "../components"
 
@@ -17,6 +18,10 @@ SplitView {
     property var currentModule: null
     property var currentFunction: null
 
+    property var endReason: ""
+
+    property var _scriptInstance: agentService.instances[0] ?? null
+
     function dispose() {
         log.dispose();
     }
@@ -30,6 +35,9 @@ SplitView {
     }
 
     onCurrentFunctionChanged: {
+        if (_scriptInstance === null)
+            return;
+
         var func = currentFunction;
         if (func) {
             agentService.disassemble(func.address, function (error, instructions) {
@@ -87,6 +95,8 @@ SplitView {
                         columnWidths: [20, 63, -1]
                     }
                     Row {
+                        visible: _scriptInstance !== null
+
                         leftPadding: 5
                         rightPadding: 5
                         bottomPadding: 5
@@ -186,7 +196,7 @@ SplitView {
                         Layout.fillHeight: true
 
                         columnTitles: ["", qsTr("Function"), qsTr("Calls")]
-                        columnWidths: [20, 83, -1]
+                        columnWidths: [20, -1, 80]
 
                         onCurrentRowChanged: {
                             var currentId = model.data(model.index(currentRow, 0), "id") || null;
@@ -205,6 +215,8 @@ SplitView {
                         }
                     }
                     RowLayout {
+                        visible: _scriptInstance !== null
+
                         Layout.rightMargin: 5
                         Layout.bottomMargin: 5
                         Layout.leftMargin: 5
@@ -224,11 +236,11 @@ SplitView {
                             }
                         }
                         Button {
-                            text: qsTr("Resolve Symbols")
+                            text: qsTr("Symbolicate")
                             enabled: currentModule !== null
 
                             onClicked:  {
-                                models.functions.resolveSymbols(currentModule.id);
+                                models.functions.symbolicate(currentModule.id);
                             }
                         }
                     }
@@ -237,62 +249,126 @@ SplitView {
         }
     }
 
-    SplitView {
-        orientation: Qt.Vertical
+    ColumnLayout {
+        spacing: 0
 
-        DisassemblyView {
-            id: disassembly
-            SplitView.fillWidth: true
-            SplitView.fillHeight: true
-        }
+        Frame {
+            visible: _scriptInstance === null
 
-        TextArea {
-            id: log
+            Layout.fillWidth: true
 
-            property var _lineLengths: []
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 10
 
-            Component.onCompleted: {
-                models.functions.logMessage.connect(_onLogMessage);
-                functionDialog.rename.connect(_onRename);
-            }
-
-            function dispose() {
-                functionDialog.rename.disconnect(_onRename);
-                models.functions.logMessage.disconnect(_onLogMessage);
-            }
-
-            function _onLogMessage(func, message) {
-                var lengthBefore = length;
-                append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
-                var lengthAfter = length;
-                var lineLength = lengthAfter - lengthBefore;
-                _lineLengths.push(lineLength);
-                if (_lineLengths.length === 11) {
-                    var firstLineLength = _lineLengths.splice(0, 1)[0];
-                    remove(0, firstLineLength);
+                Label {
+                    text: endReason + "."
+                    Layout.alignment: Qt.AlignHCenter
+                    color: "lavender"
+                    font.bold: true
+                }
+                Button {
+                    text: qsTr("Close")
+                    Layout.alignment: Qt.AlignHCenter
+                    onClicked: endSession()
                 }
             }
 
-            function _onRename(func, oldName, newName) {
-                text = text.replace(new RegExp("(<a href=\"" + func.id + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
-            }
-
-            onLinkActivated: {
-                functionDialog.functionId = parseInt(link, 10);
-                functionDialog.open();
-            }
-
-            SplitView.fillWidth: true
-            SplitView.minimumHeight: 200
             background: Rectangle {
-                color: "#060606"
+                color: "crimson"
             }
-            font: fixedFont
-            textFormat: TextEdit.RichText
-            wrapMode: TextEdit.NoWrap
-            readOnly: true
-            selectByKeyboard: true
-            selectByMouse: true
+        }
+
+        Frame {
+            visible: _scriptInstance !== null && _scriptInstance.processState === ScriptInstance.ProcessState.Paused
+
+            Layout.fillWidth: true
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 10
+
+                Label {
+                    text: qsTr("Process is paused near its entrypoint.")
+                    Layout.alignment: Qt.AlignHCenter
+                    color: "#444"
+                    font.bold: true
+                }
+                Button {
+                    text: qsTr("Resume")
+                    Layout.alignment: Qt.AlignHCenter
+                    onClicked: agentService.resumeProcess()
+                }
+            }
+
+            background: Rectangle {
+                color: "lightgreen"
+            }
+        }
+
+        SplitView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            orientation: Qt.Vertical
+
+            DisassemblyView {
+                id: disassembly
+
+                visible: _scriptInstance !== null
+
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+            }
+
+            TextArea {
+                id: log
+
+                property var _lineLengths: []
+
+                Component.onCompleted: {
+                    models.functions.logMessage.connect(_onLogMessage);
+                    functionDialog.rename.connect(_onRename);
+                }
+
+                function dispose() {
+                    functionDialog.rename.disconnect(_onRename);
+                    models.functions.logMessage.disconnect(_onLogMessage);
+                }
+
+                function _onLogMessage(func, message) {
+                    var lengthBefore = length;
+                    append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
+                    var lengthAfter = length;
+                    var lineLength = lengthAfter - lengthBefore;
+                    _lineLengths.push(lineLength);
+                    if (_lineLengths.length === 11) {
+                        var firstLineLength = _lineLengths.splice(0, 1)[0];
+                        remove(0, firstLineLength);
+                    }
+                }
+
+                function _onRename(func, oldName, newName) {
+                    text = text.replace(new RegExp("(<a href=\"" + func.id + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
+                }
+
+                onLinkActivated: {
+                    functionDialog.functionId = parseInt(link, 10);
+                    functionDialog.open();
+                }
+
+                SplitView.fillWidth: true
+                SplitView.minimumHeight: 200
+                background: Rectangle {
+                    color: "#060606"
+                }
+                font: fixedFont
+                textFormat: TextEdit.RichText
+                wrapMode: TextEdit.NoWrap
+                readOnly: true
+                selectByKeyboard: true
+                selectByMouse: true
+            }
         }
     }
 }
