@@ -15,7 +15,7 @@ TableView {
     boundsBehavior: Flickable.StopAtBounds
 
     columnWidthProvider: function (column) {
-        var width = columnWidths[column];
+        const width = columnWidths[column];
         if (width === -1) {
             return tableView.width - columnWidths.reduce((total, width) => total + Math.max(width, 0), 0);
         }

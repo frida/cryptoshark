@@ -15,7 +15,7 @@ Controls.Dialog {
     }
 
     onAccepted: {
-        var currentIndex = processes.currentIndex;
+        const currentIndex = processes.currentIndex;
         if (currentIndex !== -1) {
             selected(deviceModel.get(devices.currentIndex), processModel.get(currentIndex));
         }

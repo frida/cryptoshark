@@ -20,11 +20,11 @@ Dialog {
     }
 
     onAccepted: {
-        var oldName = _func.name;
-        var newName = name.text.trim();
+        const oldName = _func.name;
+        const newName = name.text.trim();
         if (newName !== oldName) {
-            var suffix = "";
-            var count = 2;
+            let suffix = "";
+            let count = 2;
             while (!models.functions.updateName(_func.id, newName + suffix)) {
                 suffix = "_" + count;
                 count++;

@@ -213,7 +213,7 @@ ApplicationWindow {
             const callback = _requests[id];
             delete _requests[id];
 
-            var result, error;
+            let result, error;
             if (type === "result") {
                 result = payload;
                 error = null;

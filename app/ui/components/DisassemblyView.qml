@@ -3,10 +3,10 @@ import QtQuick.Controls 2.3
 
 TextArea {
     function render(instructions) {
-        var immediates = /((\b|-)(0x|[0-9])[0-9a-f]*)\b/g;
-        var registers = /\b([re][abcd]x|[re][sd]i|[re][bs]p|[re]ip)\b/g;
-        var lines = instructions.map(function (insn) {
-            var line = "<font color=\"#ff8689\">" + _zeroPad(insn.address.substr(2)) + "</font>&nbsp;";
+        const immediates = /((\b|-)(0x|[0-9])[0-9a-f]*)\b/g;
+        const registers = /\b([re][abcd]x|[re][sd]i|[re][bs]p|[re]ip)\b/g;
+        const lines = instructions.map(insn => {
+            let line = "<font color=\"#ff8689\">" + _zeroPad(insn.address.substr(2)) + "</font>&nbsp;";
             line += "<font color=\"#6064f6\"><b>" + insn.mnemonic + "</b>";
             if (insn.opStr) {
                 line += " " + insn.opStr
@@ -20,7 +20,7 @@ TextArea {
     }
 
     function _zeroPad(s) {
-        var result = s;
+        let result = s;
         while (result.length < 8) {
             result = "0" + result;
         }

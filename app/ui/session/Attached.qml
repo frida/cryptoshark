@@ -38,9 +38,9 @@ SplitView {
         if (_scriptInstance === null)
             return;
 
-        var func = currentFunction;
+        const func = currentFunction;
         if (func) {
-            agentService.disassemble(func.address, function (error, instructions) {
+            agentService.disassemble(func.address, (error, instructions) => {
                 if (error !== null) {
                     console.error("Oops:", error);
                     return;
@@ -114,9 +114,9 @@ SplitView {
                             enabled: threadsView.currentRow !== -1 && threadsModel !== null
 
                             onClicked: {
-                                var row = threadsView.currentRow;
-                                var index = threadsModel.index(row, 0);
-                                var thread = threadsModel.getRow(row);
+                                const row = threadsView.currentRow;
+                                const index = threadsModel.index(row, 0);
+                                const thread = threadsModel.getRow(row);
 
                                 if (_action === "follow") {
                                     threadsModel.setData(index, "display", "F");
@@ -158,7 +158,7 @@ SplitView {
                     columnWidths: [-1, 80]
 
                     onCurrentRowChanged: {
-                        var currentId = model.data(model.index(currentRow, 0), "id") || null;
+                        const currentId = model.data(model.index(currentRow, 0), "id") || null;
                         if (currentId !== null) {
                             if (currentModule === null || currentModule.id !== currentId) {
                                 currentModule = model.getById(currentId);
@@ -199,7 +199,7 @@ SplitView {
                         columnWidths: [20, -1, 80]
 
                         onCurrentRowChanged: {
-                            var currentId = model.data(model.index(currentRow, 0), "id") || null;
+                            const currentId = model.data(model.index(currentRow, 0), "id") || null;
                             if (currentId !== null) {
                                 if (currentFunction === null || currentFunction.id !== currentId) {
                                     currentFunction = model.getById(currentId);
@@ -337,13 +337,13 @@ SplitView {
                 }
 
                 function _onLogMessage(func, message) {
-                    var lengthBefore = length;
+                    const lengthBefore = length;
                     append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
-                    var lengthAfter = length;
-                    var lineLength = lengthAfter - lengthBefore;
+                    const lengthAfter = length;
+                    const lineLength = lengthAfter - lengthBefore;
                     _lineLengths.push(lineLength);
                     if (_lineLengths.length === 11) {
-                        var firstLineLength = _lineLengths.splice(0, 1)[0];
+                        const firstLineLength = _lineLengths.splice(0, 1)[0];
                         remove(0, firstLineLength);
                     }
                 }
