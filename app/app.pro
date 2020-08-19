@@ -3,7 +3,7 @@ TEMPLATE = app
 TARGET = Cryptoshark
 
 QT += qml quick quickcontrols2 sql widgets
-CONFIG += c++11
+CONFIG += c++11 qtquickcompiler
 
 QTPLUGIN.bearer = -
 QTPLUGIN.imageformats = -
