@@ -35,8 +35,6 @@ void Models::open(QString name)
     m_db.exec("PRAGMA synchronous = OFF");
     m_db.exec("PRAGMA journal_mode = MEMORY");
 
-    delete m_modules;
-    delete m_functions;
     m_modules = new Modules(this, m_db);
     m_functions = new Functions(this, m_db);
     emit modulesChanged(m_modules);
@@ -45,6 +43,9 @@ void Models::open(QString name)
 
 void Models::close()
 {
+    if (!m_db.isValid())
+        return;
+
     delete m_modules;
     delete m_functions;
     m_modules = nullptr;
@@ -52,7 +53,9 @@ void Models::close()
     emit modulesChanged(m_modules);
     emit functionsChanged(m_functions);
 
-    m_db.close();
+    auto connectionName = m_db.connectionName();
+    m_db = QSqlDatabase();
+    QSqlDatabase::removeDatabase(connectionName);
 }
 
 QString Models::dbFilePath(QString name)
