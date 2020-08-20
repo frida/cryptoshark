@@ -2,7 +2,7 @@
 
 setlocal EnableDelayedExpansion
 
-set __CS_FRIDA_VERSION=12.11.9
+set __CS_FRIDA_VERSION=12.11.10
 
 set __CS_ARCH=%1
 if "!__CS_ARCH!" == "" (
