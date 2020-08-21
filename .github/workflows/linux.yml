@@ -1,0 +1,44 @@
+name: Linux
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v2
+      with:
+        path: ../dist
+        key: qt-${{ runner.os }}
+
+    - name: Build Qt
+      if: steps.cache-qt.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get install libatspi2.0-dev libgtk-3-dev libharfbuzz-dev '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
+        . tools/linux/activate-env
+        get-qt
+        build-qt
+
+    - name: Build Cryptoshark
+      run: |
+        ./build
+
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest_linux"
+        prerelease: true
+        title: "Latest Linux Build"
+        files: |
+          ../build-cryptoshark-x86_64/app/cryptoshark
