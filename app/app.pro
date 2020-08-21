@@ -1,6 +1,10 @@
 TEMPLATE = app
 
-TARGET = Cryptoshark
+macx {
+    TARGET = Cryptoshark
+} else {
+    TARGET = cryptoshark
+}
 
 QT += qml quick quickcontrols2 sql widgets
 CONFIG += c++11 qtquickcompiler

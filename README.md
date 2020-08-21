@@ -24,13 +24,13 @@ First, make sure you have a Qt >= 5.15 SDK installed and that its
 
 Run the `build` script.  This will output a binary at:
 
-- Windows: `..\build-cryptoshark-x86_64\app\release\Cryptoshark.exe`
+- Windows: `..\build-cryptoshark-x86_64\app\release\cryptoshark.exe`
 - macOS: `../build-cryptoshark-x86_64/app/Cryptoshark.app/Contents/MacOS/Cryptoshark`
-- Linux: `../build-cryptoshark-x86_64/app/Cryptoshark`
+- Linux: `../build-cryptoshark-x86_64/app/cryptoshark`
 
 ### Building the app: Qt Creator
 
-Run the `bootstrap` script and then open `Cryptoshark.pro` in Qt Creator.
+Run the `bootstrap` script and then open `cryptoshark.pro` in Qt Creator.
 
 ### Building agent.js
 
@@ -83,7 +83,7 @@ Run `tools\windows\env-x86_64.bat` to enter the environment, then:
 
 - A fresh new portable binary is now at:
 
-    ..\build-cryptoshark-x86_64\app\release\Cryptoshark.exe
+    ..\build-cryptoshark-x86_64\app\release\cryptoshark.exe
 
 ### macOS
 
