@@ -3,6 +3,8 @@ name: macOS
 on:
   push:
     branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   build:
@@ -13,31 +15,15 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Cache Qt
-      id: cache-qt
-      uses: actions/cache@v2
-      with:
-        path: "${{ github.workspace }}/../dist"
-        key: "qt-${{ runner.os }}"
-
-    - name: Build Qt
-      if: steps.cache-qt.outputs.cache-hit != 'true'
+    - name: Get Dist Location
+      id: get-dist-location
       run: |
-        . tools/macos/activate-env
-        get-qt
-        build-qt
+        echo "::set-output name=path::$(cd "$GITHUB_WORKSPACE/../" && pwd)/dist"
+      shell: bash
 
-    - name: Build Cryptoshark
+    - name: Test stuff
       run: |
-        . tools/macos/activate-env
-        ./build
-        macdeployqt ../build-cryptoshark-x86_64/app/Cryptoshark.app -dmg
-
-    - uses: "marvinpinto/action-automatic-releases@latest"
-      with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest_macos"
-        prerelease: true
-        title: "Latest macOS Build"
-        files: |
-          ../build-cryptoshark-x86_64/app/Cryptoshark.dmg
+        echo "DISTDIR is at $DISTDIR"
+        echo "WORKSPACE is at $GITHUB_WORKSPACE"
+      env:
+        DISTDIR: ${{ steps.get-dist-location.outputs.path }}
