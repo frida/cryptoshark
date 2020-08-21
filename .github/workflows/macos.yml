@@ -29,6 +29,7 @@ jobs:
 
     - name: Build Cryptoshark
       run: |
+        . tools/macos/activate-env
         ./build
         macdeployqt ../build-cryptoshark-x86_64/app/Cryptoshark.app -dmg
 
