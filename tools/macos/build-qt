@@ -73,5 +73,3 @@ pushd "build-qt-$CRYPTOSHARK_ARCH" > /dev/null
 make -j$CRYPTOSHARK_MAKEJ || exit $?
 make install || exit $?
 popd > /dev/null
-
-exit 0
