@@ -13,13 +13,25 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Build
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v2
+      with:
+        path: ../dist
+        key: qt-${{ runner.os }}
+
+    - name: Build Qt
+      if: steps.cache-qt.outputs.cache-hit != 'true'
       run: |
         . tools/macos/activate-env
         get-qt
         build-qt
+
+    - name: Build Cryptoshark
+      run: |
         ./build
         macdeployqt ../build-cryptoshark-x86_64/app/Cryptoshark.app -dmg
+
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
