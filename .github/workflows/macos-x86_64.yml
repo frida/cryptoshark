@@ -1,4 +1,4 @@
-name: macOS/x86_64
+name: macOS x86_64
 
 on:
   push:
@@ -15,8 +15,8 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Get Qt Prefix
-      id: get-qt-prefix
+    - name: Resolve Qt Prefix
+      id: resolve-qt-prefix
       run: |
         echo "::set-output name=path::$(cd "$GITHUB_WORKSPACE/../" && pwd)/dist"
       shell: bash
@@ -25,7 +25,7 @@ jobs:
       id: cache-qt
       uses: actions/cache@v2
       with:
-        path: ${{ steps.get-qt-prefix.outputs.path }}
+        path: ${{ steps.resolve-qt-prefix.outputs.path }}
         key: qt-macos-10.15-x86_64
 
     - name: Build Qt

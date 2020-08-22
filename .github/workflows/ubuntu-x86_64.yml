@@ -1,4 +1,4 @@
-name: Ubuntu/x86_64
+name: Ubuntu x86_64
 
 on:
   push:
@@ -15,8 +15,12 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Get Qt Prefix
-      id: get-qt-prefix
+    - name: Install Build Dependencies
+      run: |
+        sudo apt-get install libatspi2.0-dev libgtk-3-dev libharfbuzz-dev '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
+
+    - name: Resolve Qt Prefix
+      id: resolve-qt-prefix
       run: |
         echo "::set-output name=path::$(cd "$GITHUB_WORKSPACE/../" && pwd)/dist"
       shell: bash
@@ -25,13 +29,12 @@ jobs:
       id: cache-qt
       uses: actions/cache@v2
       with:
-        path: ${{ steps.get-qt-prefix.outputs.path }}
+        path: ${{ steps.resolve-qt-prefix.outputs.path }}
         key: qt-ubuntu-20.04-x86_64
 
     - name: Build Qt
       if: steps.cache-qt.outputs.cache-hit != 'true'
       run: |
-        sudo apt-get install libatspi2.0-dev libgtk-3-dev libharfbuzz-dev '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
         . tools/linux/activate-env
         get-qt
         build-qt
