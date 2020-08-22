@@ -168,12 +168,10 @@ QVariant Modules::headerData(int section, Qt::Orientation orientation, int role)
 {
     Q_UNUSED(orientation);
 
-    switch (role) {
-    case Qt::DisplayRole:
-        return (section == 0) ? QStringLiteral("Name") : QStringLiteral("Calls");
-    default:
+    if (role != Qt::DisplayRole)
         return QVariant();
-    }
+
+    return (section == 0) ? QStringLiteral("Name") : QStringLiteral("Calls");
 }
 
 QVariant Modules::data(const QModelIndex &index, QString roleName) const

@@ -336,19 +336,18 @@ void Functions::sortByCallsDescending()
 
 QVariant Functions::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    Q_UNUSED(section);
     Q_UNUSED(orientation);
 
-    switch (role) {
-    case Qt::DisplayRole:
-        switch (section) {
-        case 0:
-            return QStringLiteral("");
-        case 1:
-            return QStringLiteral("Function");
-        case 2:
-            return QStringLiteral("Calls");
-        }
+    if (role != Qt::DisplayRole)
+        return QVariant();
+
+    switch (section) {
+    case 0:
+        return QStringLiteral("");
+    case 1:
+        return QStringLiteral("Function");
+    case 2:
+        return QStringLiteral("Calls");
     default:
         return QVariant();
     }
