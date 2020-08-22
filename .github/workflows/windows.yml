@@ -1,0 +1,43 @@
+name: Windows
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v2
+      with:
+        path: ${{ github.workspace }}\..\dist
+        key: qt-windows-x86_64
+
+    - name: Build Qt
+      if: steps.cache-qt.outputs.cache-hit != 'true'
+      run: |
+        tools\windows\env-x86_64
+        get-qt
+        build-qt
+
+    - name: Build Cryptoshark
+      run: |
+        build
+
+    - uses: marvinpinto/action-automatic-releases@latest
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        automatic_release_tag: latest_windows
+        prerelease: true
+        title: Latest Windows Build
+        files: |
+          ..\build-cryptoshark-x86_64\app\release\cryptoshark.exe
