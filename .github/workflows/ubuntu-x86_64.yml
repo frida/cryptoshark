@@ -1,10 +1,10 @@
-name: Linux
+name: Ubuntu/x86_64
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   build:
@@ -15,12 +15,18 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Get Qt Prefix
+      id: get-qt-prefix
+      run: |
+        echo "::set-output name=path::$(cd "$GITHUB_WORKSPACE/../" && pwd)/dist"
+      shell: bash
+
     - name: Cache Qt
       id: cache-qt
       uses: actions/cache@v2
       with:
-        path: "${{ github.workspace }}/../dist"
-        key: "qt-${{ runner.os }}"
+        path: ${{ steps.get-qt-prefix.outputs.path }}
+        key: qt-ubuntu-20.04-x86_64
 
     - name: Build Qt
       if: steps.cache-qt.outputs.cache-hit != 'true'
@@ -34,11 +40,11 @@ jobs:
       run: |
         ./build
 
-    - uses: "marvinpinto/action-automatic-releases@latest"
+    - uses: marvinpinto/action-automatic-releases@latest
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest_linux"
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        automatic_release_tag: latest-ubuntu-x86_64
         prerelease: true
-        title: "Latest Linux Build"
+        title: Latest Ubuntu 20.04 Build for x86_64
         files: |
           ../build-cryptoshark-x86_64/app/cryptoshark
