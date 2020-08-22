@@ -13,7 +13,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
+        fetch-depth: 0
         submodules: recursive
+
+    - name: Resolve Version
+      id: resolve-version
+      run: |
+        echo "::set-output name=version::$(git describe --tags --exclude "latest-*")"
+      shell: bash
 
     - name: Resolve Qt Prefix
       id: resolve-qt-prefix
@@ -39,7 +46,9 @@ jobs:
       run: |
         . tools/macos/activate-env
         ./build
-        macdeployqt ../build-cryptoshark-x86_64/app/Cryptoshark.app -dmg
+        cd ../build-cryptoshark-x86_64/app
+        macdeployqt Cryptoshark.app -dmg
+        mv Cryptoshark.dmg Cryptoshark-${{ steps.resolve-version.outputs.version }}.dmg
 
     - uses: marvinpinto/action-automatic-releases@latest
       with:
@@ -48,4 +57,4 @@ jobs:
         prerelease: true
         title: Latest macOS Build for x86_64
         files: |
-          ../build-cryptoshark-x86_64/app/Cryptoshark.dmg
+          ../build-cryptoshark-x86_64/app/*.dmg
