@@ -13,7 +13,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
+        fetch-depth: 0
         submodules: recursive
+
+    - name: Resolve Version
+      id: resolve-version
+      run: |
+        echo "::set-output name=version::$(git describe --tags --exclude "latest-*")"
+      shell: bash
 
     - name: Install Build Dependencies
       run: |
@@ -39,9 +46,10 @@ jobs:
         get-qt
         build-qt
 
-    - name: Build Cryptoshark
+    - name: Build Cryptoshark Package
       run: |
         ./build
+        ./tools/linux/mkdeb ../build-cryptoshark-x86_64/app/cryptoshark ${{ steps.resolve-version.outputs.version }} amd64
 
     - uses: marvinpinto/action-automatic-releases@latest
       with:
@@ -50,4 +58,4 @@ jobs:
         prerelease: true
         title: Latest Ubuntu 20.04 Build for x86_64
         files: |
-          ../build-cryptoshark-x86_64/app/cryptoshark
+          ../build-cryptoshark-x86_64/app/*.deb
