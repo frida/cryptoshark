@@ -1,0 +1,43 @@
+#!/bin/sh
+
+executable=$1
+version=$2
+arch=$3
+if [ -z "$executable" -o -z "$version" -o -z "$arch" ]; then
+  echo "Usage: $0 <executable> <version> <arch>" > /dev/stderr
+  exit 1
+fi
+
+output_dir=$(cd $(dirname "$executable"); pwd)
+output_deb="$output_dir/cryptoshark_$version-1_$arch.deb"
+
+depfile=$(mktemp)
+for dep in $(ldd "$executable" | grep -v "linux-vdso" | awk '{ print $1; }'); do
+  depname=$(dpkg -S $dep | grep ":$arch:" | head -1 | cut -f1 -d":")
+  depver=$(dpkg-query --showformat='${Version}' --show $depname | cut -f1 -d"-")
+  echo "$depname (>= $depver)" >> "$depfile"
+done
+deps=$(cat "$depfile" | sort -u | tr -s "\n" "," | sed -e "s/,/, /g" -e 's/, $//')
+rm "$depfile"
+
+pkgroot=$(mktemp -d) || exit 1
+install -m755 -d "$pkgroot/usr/bin" -d "$pkgroot/DEBIAN"
+install -m755 "$executable" "$pkgroot/usr/bin/cryptoshark"
+cat << EOF > "$pkgroot/DEBIAN/control"
+Package: cryptoshark
+Version: $version-1
+Section: debug
+Priority: optional
+Architecture: $arch
+Depends: $deps
+Maintainer: Ole André Vadla Ravnås <oleavr@frida.re>
+Homepage: https://github.com/frida/cryptoshark
+Description: Code tracer powered by Frida
+EOF
+
+dpkg-deb --root-owner-group --build "$pkgroot" "$output_deb"
+result=$?
+
+rm -r "$pkgroot"
+
+exit $result
