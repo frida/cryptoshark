@@ -3,8 +3,6 @@ name: Ubuntu x86_64
 on:
   push:
     branches: [master]
-  pull_request:
-    branches: [master]
 
 jobs:
   build:
