@@ -1,0 +1,63 @@
+name: Windows
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Install 7-Zip PowerShell Module
+      run: Install-Module 7Zip4PowerShell -Force -Verbose
+      shell: powershell
+
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Resolve Qt Prefix
+      id: resolve-qt-prefix
+      run: |
+        cd ..
+        echo Setting path=%cd%\dist
+        echo ::set-output name=path::%cd%\dist
+      shell: cmd
+
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.resolve-qt-prefix.outputs.path }}
+        key: qt-windows-x86_64
+
+    - name: Build Qt
+      if: steps.cache-qt.outputs.cache-hit != 'true'
+      run: |
+        rmdir /s /q "%Programfiles%\dotnet"
+        rmdir /s /q "%Programfiles%\Unity"
+        call tools\windows\activate-env x86_64
+        call get-qt
+        call build-qt C:\build-qt
+      shell: cmd
+
+    - name: Build Cryptoshark
+      run: build
+      shell: cmd
+
+    - name: Package Cryptoshark
+      run: Compress-7Zip ..\build-cryptoshark-x86_64\app\release\cryptoshark.exe -ArchiveFileName "cryptoshark.zip" -Format Zip
+      shell: powershell
+
+    - uses: marvinpinto/action-automatic-releases@latest
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        automatic_release_tag: latest_windows
+        prerelease: true
+        title: Latest Windows Build
+        files: |
+          cryptoshark.zip
