@@ -1,19 +1,30 @@
 @echo off
 
-pushd %CRYPTOSHARK_PARENTDIR%
+setlocal EnableDelayedExpansion
 
+set __CS_BUILDDIR_PATH=%1
+if "!__CS_BUILDDIR_PATH!" == "" (
+  set __CS_BUILDDIR_PATH=%CRYPTOSHARK_PARENTDIR%\build-qt-%CRYPTOSHARK_ARCH%
+)
+
+for %%I in ("!__CS_BUILDDIR_PATH!") do set "__CS_BUILDDIR_NAME=%%~nI"
+for %%I in ("!__CS_BUILDDIR_PATH!\..") do set "__CS_BUILDDIR_PARENT=%%~fI"
+
+pushd %CRYPTOSHARK_PARENTDIR%
 setlocal
 set PERLIO=:raw
 perl -i -pe "s, stl exceptions,," qt5\qtbase\src\angle\src\config.pri || exit /b
 perl -i -pe "s,_HAS_EXCEPTIONS=0 ,," qt5\qtbase\src\angle\src\config.pri || exit /b
 perl -i -pe "s, WIN32 _ENABLE_EXTENDED_ALIGNED_STORAGE, WIN32 _HAS_EXCEPTIONS=0 _ENABLE_EXTENDED_ALIGNED_STORAGE," qt5\qtbase\mkspecs\common\msvc-desktop.conf || exit /b
 endlocal
+popd
 
-if exist build-qt-%CRYPTOSHARK_ARCH% goto already_built
+pushd !__CS_BUILDDIR_PARENT!
+if exist !__CS_BUILDDIR_NAME! goto already_built
 echo on
-mkdir build-qt-%CRYPTOSHARK_ARCH% || exit /b
-pushd build-qt-%CRYPTOSHARK_ARCH%
-call ..\qt5\configure ^
+mkdir !__CS_BUILDDIR_NAME! || exit /b
+pushd !__CS_BUILDDIR_NAME!
+call %CRYPTOSHARK_PARENTDIR%\qt5\configure ^
     -opensource -confirm-license ^
     -prefix %CRYPTOSHARK_QTDIR% ^
     -feature-relocatable ^
@@ -48,11 +59,11 @@ call ..\qt5\configure ^
 nmake || exit /b
 nmake install || exit /b
 popd
-
 popd
+
 exit /b 0
 
 :already_built
-echo Already built. Wipe build-qt-%CRYPTOSHARK_ARCH% to rebuild.
+echo Already built. Wipe !__CS_BUILDDIR_PATH! to rebuild.
 popd
 exit /b 0
