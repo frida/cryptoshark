@@ -61,3 +61,8 @@ cryptoshark_static_qt {
         QMAKE_LFLAGS += /LTCG
     }
 }
+
+unix {
+    INSTALLS += target
+    target.path = /usr/bin
+}
