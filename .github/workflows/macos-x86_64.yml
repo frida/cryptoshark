@@ -43,9 +43,11 @@ jobs:
         build-qt
 
     - name: Build Cryptoshark
+      run: ./build
+
+    - name: Package Cryptoshark
       run: |
         . tools/macos/activate-env
-        ./build
         cd ../build-cryptoshark-x86_64/app
         macdeployqt Cryptoshark.app -dmg
         mv Cryptoshark.dmg Cryptoshark-${{ steps.resolve-version.outputs.version }}.dmg
