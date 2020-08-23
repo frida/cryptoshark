@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
+    - name: Install Build Dependencies
+      run: |
+        sudo apt-get install libatspi2.0-dev libgtk-3-dev libharfbuzz-dev '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
+
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
@@ -21,10 +25,6 @@ jobs:
       run: |
         echo "::set-output name=version::$(git describe --tags --exclude "latest-*")"
       shell: bash
-
-    - name: Install Build Dependencies
-      run: |
-        sudo apt-get install libatspi2.0-dev libgtk-3-dev libharfbuzz-dev '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
 
     - name: Resolve Qt Prefix
       id: resolve-qt-prefix
@@ -46,10 +46,11 @@ jobs:
         get-qt
         build-qt
 
-    - name: Build Cryptoshark Package
-      run: |
-        ./build
-        ./tools/linux/mkdeb ../build-cryptoshark-x86_64/app/cryptoshark ${{ steps.resolve-version.outputs.version }} amd64
+    - name: Build Cryptoshark
+      run: ./build
+
+    - name: Package Cryptoshark
+      run: ./tools/linux/mkdeb ../build-cryptoshark-x86_64/app/cryptoshark ${{ steps.resolve-version.outputs.version }} amd64
 
     - uses: marvinpinto/action-automatic-releases@latest
       with:
