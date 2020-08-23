@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Cryptoshark
+GenericName=Code Tracer
+Comment=Code tracer powered by Frida
+Exec=cryptoshark
+Icon=cryptoshark
+Terminal=false
+Categories=Development;Debugger;

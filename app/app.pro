@@ -66,3 +66,19 @@ unix {
     INSTALLS += target
     target.path = /usr/bin
 }
+linux {
+    INSTALLS += desktop icon
+
+    desktop.path = /usr/share/applications
+    desktop.files = cryptoshark.desktop
+
+    icon.path = /usr/share/icons/hicolor/scalable/apps
+    icon.files = images/hicolor/scalable/apps/cryptoshark.svg
+
+    resolutions = 16x16 32x32 48x48 64x64 128x128
+    for (resolution, resolutions) {
+        eval(INSTALLS += icon$${resolution})
+        eval(icon$${resolution}.path = /usr/share/icons/hicolor/$${resolution}/apps)
+        eval(icon$${resolution}.files = images/hicolor/$${resolution}/apps/cryptoshark.png)
+    }
+}
