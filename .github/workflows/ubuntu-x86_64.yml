@@ -50,7 +50,7 @@ jobs:
       run: ./build
 
     - name: Package Cryptoshark
-      run: ./tools/linux/mkdeb ../build-cryptoshark-x86_64/app/cryptoshark ${{ steps.resolve-version.outputs.version }} amd64
+      run: ./tools/linux/mkdeb ../build-cryptoshark-x86_64 ${{ steps.resolve-version.outputs.version }} amd64
 
     - uses: marvinpinto/action-automatic-releases@latest
       with:
@@ -59,4 +59,4 @@ jobs:
         prerelease: true
         title: Latest Ubuntu 20.04 Build for x86_64
         files: |
-          ../build-cryptoshark-x86_64/app/*.deb
+          ../build-cryptoshark-x86_64/*.deb

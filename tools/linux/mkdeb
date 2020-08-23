@@ -1,18 +1,17 @@
 #!/bin/sh
 
-executable=$1
+builddir=$1
 version=$2
 arch=$3
-if [ -z "$executable" -o -z "$version" -o -z "$arch" ]; then
-  echo "Usage: $0 <executable> <version> <arch>" > /dev/stderr
+if [ -z "$builddir" -o -z "$version" -o -z "$arch" ]; then
+  echo "Usage: $0 <builddir> <version> <arch>" > /dev/stderr
   exit 1
 fi
 
-output_dir=$(cd $(dirname "$executable"); pwd)
-output_deb="$output_dir/cryptoshark_$version-1_$arch.deb"
+output_deb="$builddir/cryptoshark_$version-1_$arch.deb"
 
 depfile=$(mktemp)
-for dep in $(ldd "$executable" | grep -v "linux-vdso" | awk '{ print $1; }'); do
+for dep in $(ldd "$builddir/app/cryptoshark" | grep -v "linux-vdso" | awk '{ print $1; }'); do
   depname=$(dpkg -S $dep | grep ":$arch:" | head -1 | cut -f1 -d":")
   depver=$(dpkg-query --showformat='${Version}' --show $depname | cut -f1 -d"-")
   echo "$depname (>= $depver)" >> "$depfile"
@@ -22,7 +21,7 @@ rm "$depfile"
 
 pkgroot=$(mktemp -d) || exit 1
 install -m755 -d "$pkgroot/usr/bin" -d "$pkgroot/DEBIAN"
-install -m755 "$executable" "$pkgroot/usr/bin/cryptoshark"
+make -C "$builddir/app" install INSTALL_ROOT="$pkgroot"
 cat << EOF > "$pkgroot/DEBIAN/control"
 Package: cryptoshark
 Version: $version-1
