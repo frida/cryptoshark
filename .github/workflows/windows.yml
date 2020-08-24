@@ -33,7 +33,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ${{ steps.resolve-qt-prefix.outputs.path }}
-        key: qt-windows-x86_64
+        key: qt5-windows-x86_64
 
     - name: Build Qt
       if: steps.cache-qt.outputs.cache-hit != 'true'
