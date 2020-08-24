@@ -7,6 +7,8 @@ import Frida 1.0
 Controls.Dialog {
     id: dialog
 
+    property var currentDevice: (devices.currentIndex !== -1) ? deviceModel.get(devices.currentIndex) : null
+
     signal selected(var device, string program, var options)
 
     onOpened: {
@@ -16,12 +18,13 @@ Controls.Dialog {
     }
 
     onAccepted: {
-        const currentIndex = devices.currentIndex;
-        if (currentIndex === -1)
+        const device = currentDevice;
+        if (device === null)
             return;
-        const device = deviceModel.get(currentIndex);
 
         const program = programField.text;
+        if (program === "")
+            return;
 
         if (customArgvButton.checked) {
             spawnOptions.argv = argvEditor.getVector();
@@ -42,6 +45,17 @@ Controls.Dialog {
         }
 
         selected(device, program, spawnOptions);
+    }
+
+    onCurrentDeviceChanged: {
+        applications.currentIndex = -1;
+
+        programField.text = "";
+
+        [defaultArgvButton, defaultEnvButton, defaultCwdButton].forEach(radioButton => {
+            if (!radioButton.checked)
+                radioButton.toggle();
+        });
     }
 
     width: parent.width - 50
@@ -117,21 +131,24 @@ Controls.Dialog {
                 spacing: 10
 
                 Controls.GroupBox {
-                    id: program;
+                    id: program
                     title: qsTr("Program")
                     Controls.TextField {
                         id: programField
                         implicitWidth: 230
-                        text: "/bin/ls"
+                        placeholderText: (currentDevice === null || currentDevice.type === Device.Type.Local)
+                            ? Cryptoshark.exampleLocalProgram
+                            : Cryptoshark.exampleRemoteProgram
                         selectByMouse: true
                     }
                 }
 
                 Controls.GroupBox {
-                    id: argv;
+                    id: argv
                     title: qsTr("Argument Vector")
                     Column {
                         Controls.RadioButton {
+                            id: defaultArgvButton
                             text: qsTr("Default")
                             checked: true
                         }
@@ -149,10 +166,11 @@ Controls.Dialog {
                 }
 
                 Controls.GroupBox {
-                    id: env;
+                    id: env
                     title: qsTr("Environment")
                     Column {
                         Controls.RadioButton {
+                            id: defaultEnvButton
                             text: qsTr("Default")
                             checked: true
                         }
@@ -174,6 +192,7 @@ Controls.Dialog {
                     title: qsTr("Working Directory")
                     Column {
                         Controls.RadioButton {
+                            id: defaultCwdButton
                             text: qsTr("Default")
                             checked: true
                         }
@@ -204,7 +223,7 @@ Controls.Dialog {
 
     ApplicationListModel {
         id: applicationsModel
-        device: (devices.currentIndex !== -1) ? deviceModel.get(devices.currentIndex) : null
+        device: currentDevice
 
         onError: {
             errorDialog.text = message;

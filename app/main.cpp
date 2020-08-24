@@ -11,6 +11,13 @@
 
 #define CRYPTOSHARK_STYLE "Fusion"
 
+#ifdef Q_OS_WINDOWS
+# define CRYPTOSHARK_EXAMPLE_LOCAL_PROGRAM "C:\\TargetProgram.exe"
+#else
+# define CRYPTOSHARK_EXAMPLE_LOCAL_PROGRAM "/bin/ls"
+#endif
+#define CRYPTOSHARK_EXAMPLE_REMOTE_PROGRAM "/bin/ls"
+
 static QObject *createRouterSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
     Q_UNUSED(engine);
@@ -59,6 +66,8 @@ int main(int argc, char *argv[])
     auto root = engine.rootContext();
     root->setContextProperty("Cryptoshark", QJsonObject {
         {"version", CRYPTOSHARK_VERSION},
+        {"exampleLocalProgram", CRYPTOSHARK_EXAMPLE_LOCAL_PROGRAM},
+        {"exampleRemoteProgram", CRYPTOSHARK_EXAMPLE_REMOTE_PROGRAM},
     });
     root->setContextProperty("fixedFont", fixedFont);
 #ifdef CRYPTOSHARK_STATIC_QT
