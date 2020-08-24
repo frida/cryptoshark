@@ -39,4 +39,18 @@ Item {
             Layout.alignment: Qt.AlignCenter
         }
     }
+
+    TextArea {
+        text: "v" + Cryptoshark.version
+
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: 5
+        anchors.bottomMargin: 5
+
+        color: "#666"
+        readOnly: true
+        selectByMouse: true
+        mouseSelectionMode: TextEdit.SelectWords
+    }
 }

@@ -37,6 +37,12 @@ HEADERS += \
     models/modules.h \
     router.h
 
+QMAKE_SUBSTITUTES += config.h.in
+
+COMMIT_DESCRIPTION = $$system(git describe --tags --exclude "latest-*")
+VERSION_STR = $$replace(COMMIT_DESCRIPTION, "-", ".")
+VERSION = $$section(VERSION_STR, ., 0, 3)
+
 win32 {
     PARTS = $$[QT_INSTALL_LIBS] Qt5Core.prl
     COREPRL = $$join(PARTS, "\\")

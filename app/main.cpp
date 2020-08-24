@@ -1,3 +1,4 @@
+#include "config.h"
 #include "models.h"
 #include "nativepointer.h"
 #include "router.h"
@@ -59,7 +60,11 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     auto fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    engine.rootContext()->setContextProperty("fixedFont", fixedFont);
+    auto root = engine.rootContext();
+    root->setContextProperty("Cryptoshark", QJsonObject {
+        {"version", CRYPTOSHARK_VERSION},
+    });
+    root->setContextProperty("fixedFont", fixedFont);
 #ifdef CRYPTOSHARK_STATIC_QT
     engine.setImportPathList(QStringList(QStringLiteral("qrc:/qt-project.org/imports")));
 #else
