@@ -9,8 +9,8 @@ macx {
 QT += qml quick quickcontrols2 sql widgets
 CONFIG += c++11 qtquickcompiler
 
+QTPLUGIN += qsvg
 QTPLUGIN.bearer = -
-QTPLUGIN.imageformats = -
 QTPLUGIN.qmltooling = -
 
 SOURCES += \
