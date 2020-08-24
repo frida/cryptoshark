@@ -9,11 +9,7 @@
 #include <QQuickStyle>
 #include <QtQml>
 
-#ifdef Q_OS_WINDOWS
-# define CRYPTOSHARK_STYLE "Universal"
-#else
-# define CRYPTOSHARK_STYLE "Fusion"
-#endif
+#define CRYPTOSHARK_STYLE "Fusion"
 
 static QObject *createRouterSingleton(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
