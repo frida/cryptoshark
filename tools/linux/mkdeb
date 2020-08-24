@@ -1,12 +1,15 @@
 #!/bin/sh
 
 builddir=$1
-version=$2
-arch=$3
-if [ -z "$builddir" -o -z "$version" -o -z "$arch" ]; then
-  echo "Usage: $0 <builddir> <version> <arch>" > /dev/stderr
+if [ -z "$builddir" ]; then
+  echo "Usage: $0 <builddir>" > /dev/stderr
   exit 1
 fi
+
+version=$(grep CRYPTOSHARK_VERSION "$builddir/app/config.h" | cut -f2 -d'"')
+
+# TODO: detect once we build Debian packages for other architectures
+arch=amd64
 
 output_deb="$builddir/cryptoshark_$version-1_$arch.deb"
 

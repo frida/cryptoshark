@@ -20,12 +20,6 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Resolve Version
-      id: resolve-version
-      run: |
-        echo "::set-output name=version::$(git describe --tags --exclude "latest-*")"
-      shell: bash
-
     - name: Resolve Qt Prefix
       id: resolve-qt-prefix
       run: |
@@ -50,7 +44,7 @@ jobs:
       run: ./build
 
     - name: Package Cryptoshark
-      run: ./tools/linux/mkdeb ../build-cryptoshark-x86_64 ${{ steps.resolve-version.outputs.version }} amd64
+      run: ./tools/linux/mkdeb ../build-cryptoshark-x86_64
 
     - uses: marvinpinto/action-automatic-releases@latest
       with:
