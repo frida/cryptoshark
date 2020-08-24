@@ -10,15 +10,25 @@ Item {
         anchors.centerIn: parent
         spacing: 10
 
+        Image {
+            source: Qt.resolvedUrl("../../images/logo.svg")
+            sourceSize.width: 320
+
+            Layout.bottomMargin: 30
+            Layout.alignment: Qt.AlignCenter
+        }
+
         Label {
             text: qsTr("Not currently attached to any process.")
+
+            Layout.alignment: Qt.AlignCenter
+            Layout.bottomMargin: 5
         }
 
         Button {
             text: qsTr("Attach")
             onClicked: attach()
 
-            Layout.topMargin: 5
             Layout.alignment: Qt.AlignCenter
         }
 
