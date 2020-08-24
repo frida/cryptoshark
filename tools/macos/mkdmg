@@ -1,0 +1,14 @@
+#!/bin/sh
+
+builddir=$1
+if [ -z "$builddir" ]; then
+  echo "Usage: $0 <builddir>" > /dev/stderr
+  exit 1
+fi
+
+cd "$builddir" || exit $?
+
+version=$(grep CRYPTOSHARK_VERSION app/config.h | cut -f2 -d'"')
+
+macdeployqt app/Cryptoshark.app -dmg || exit $?
+mv app/Cryptoshark.dmg Cryptoshark-$version.dmg
