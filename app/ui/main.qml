@@ -49,8 +49,8 @@ ApplicationWindow {
     }
 
     title: qsTr("Cryptoshark")
-    width: 640
-    height: 480
+    width: 1024
+    height: 633
     visible: true
 
     MenuBar {
