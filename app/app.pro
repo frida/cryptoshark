@@ -11,6 +11,7 @@ CONFIG += c++11 qtquickcompiler
 
 QTPLUGIN += qsvg
 QTPLUGIN.bearer = -
+QTPLUGIN.printsupport = -
 QTPLUGIN.qmltooling = -
 
 SOURCES += \
