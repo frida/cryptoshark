@@ -8,6 +8,15 @@ platform=$(tools/unix/detect-platform)
 arch=$1
 [ -z "$arch" ] && arch=$(tools/unix/detect-arch)
 
+if [ ! -f ext/frida-qml/frida-qml.pri ]; then
+  echo ""
+  echo "***"
+  echo "*** Fetching submodules"
+  echo "***"
+  git submodule init
+  git submodule update || exit $?
+fi
+
 devkit_url="https://github.com/frida/frida/releases/download/$frida_version/frida-core-devkit-$frida_version-$platform-$arch.tar.xz"
 devkit_dir="ext/frida-core/$arch"
 if [ ! -f "$devkit_dir/libfrida-core.a" ]; then
@@ -24,13 +33,27 @@ if [ ! -f "$devkit_dir/libfrida-core.a" ]; then
   popd > /dev/null
 fi
 
-if [ ! -f ext/frida-qml/frida-qml.pri ]; then
+if [ ! -f ext/radare2/build/priv_install_dir/lib/libr_core.a ]; then
   echo ""
   echo "***"
-  echo "*** Fetching frida-qml"
+  echo "*** Building r2"
   echo "***"
-  git submodule init
-  git submodule update || exit $?
+  pushd ext/radare2 > /dev/null
+  CFLAGS="-mmacosx-version-min=10.13" meson setup build \
+      --prefix="$(pwd)/build/priv_install_dir" \
+      --backend=ninja \
+      --default-library=static \
+      -Doptimization=s \
+      -Db_ndebug=true \
+      -Duse_capstone5=true \
+      -Duse_libuv=false \
+      -Duse_sys_magic=false \
+      -Ddebugger=false \
+      -Denable_tests=false \
+      -Denable_r2r=false \
+      || exit $?
+  ninja -C build install || exit $?
+  popd > /dev/null
 fi
 
 if [ ! -f app/agent.js ]; then

@@ -20,6 +20,7 @@ SOURCES += \
     models.cpp \
     models/functions.cpp \
     models/modules.cpp \
+    radare.cpp \
     router.cpp
 
 RESOURCES += app.qrc
@@ -36,6 +37,7 @@ HEADERS += \
     models.h \
     models/functions.h \
     models/modules.h \
+    radare.h \
     router.h
 
 QMAKE_SUBSTITUTES += config.h.in
@@ -68,6 +70,35 @@ cryptoshark_static_qt {
         QMAKE_LFLAGS += /LTCG
     }
 }
+
+INCLUDEPATH += \
+    $$OUT_PWD \
+    $${RADARE_PREFIX}/include/libr \
+    $${RADARE_PREFIX}/include/libr/sdb
+LIBS_PRIVATE += \
+    -L$${RADARE_PREFIX}/lib \
+    -lr_anal \
+    -lr_asm \
+    -lr_bin \
+    -lr_bp \
+    -lr_config \
+    -lr_cons \
+    -lr_core \
+    -lr_crypto \
+    -lr_debug \
+    -lr_egg \
+    -lr_flag \
+    -lr_fs \
+    -lr_hash \
+    -lr_io \
+    -lr_lang \
+    -lr_magic \
+    -lr_parse \
+    -lr_reg \
+    -lr_search \
+    -lr_socket \
+    -lr_syscall \
+    -lr_util
 
 unix {
     INSTALLS += target

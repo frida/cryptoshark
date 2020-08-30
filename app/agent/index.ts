@@ -1,5 +1,6 @@
 import { Disassembler } from "./disassembler";
 import { Service, RequestHandler } from "./interfaces";
+import { MemoryApi } from "./memory-api";
 import { ModuleMonitor } from "./module-monitor";
 import { ThreadMonitor } from "./thread-monitor";
 import { ThreadTracer } from "./thread-tracer";
@@ -13,6 +14,7 @@ class Agent {
         const moduleMap = new ModuleMap();
 
         this.services.push(
+            new MemoryApi(),
             new ModuleMonitor(moduleMap),
             new ThreadMonitor(),
             new ThreadTracer(moduleMap),

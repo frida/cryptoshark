@@ -36,13 +36,11 @@ SplitView {
 
         const func = currentFunction;
         if (func) {
-            agentService.disassemble(func.address, (error, instructions) => {
-                if (error !== null) {
-                    console.error("Oops:", error);
-                    return;
-                }
-
-                disassembly.render(instructions);
+            disassembly.text = "";
+            disassembly.loading = true;
+            agentService.disassemble(func.address, text => {
+                disassembly.text = text;
+                disassembly.loading = false;
             });
         }
     }
@@ -336,7 +334,7 @@ SplitView {
 
                 function _onLogMessage(func, message) {
                     const lengthBefore = length;
-                    append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
+                    log.append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
                     const lengthAfter = length;
                     const lineLength = lengthAfter - lengthBefore;
                     _lineLengths.push(lineLength);
@@ -358,8 +356,9 @@ SplitView {
                 SplitView.fillWidth: true
                 SplitView.minimumHeight: 200
                 background: Rectangle {
-                    color: "#060606"
+                    color: "black"
                 }
+                palette.text: "#c7c7c7"
                 font: fixedFont
                 textFormat: TextEdit.RichText
                 wrapMode: TextEdit.NoWrap

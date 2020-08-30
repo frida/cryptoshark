@@ -16,6 +16,12 @@ ApplicationWindow {
     property var _endReason: null
     property var _models: null
 
+    /*
+    Component.onCompleted: {
+        attach(Frida.localSystem, { name: "hello", pid: 78498 });
+    }
+    */
+
     function spawn(device, program, options) {
         _endReason = null;
 
@@ -176,10 +182,12 @@ ApplicationWindow {
 
         property var _requests: Object()
         property var _nextRequestId: 1
+        property var _r2Requests: []
 
         Component.onCompleted: {
             Router.attach(this);
             Router.message.connect(_onMessage);
+            r2.executeResponse.connect(_onR2Response);
         }
 
         onError: {
@@ -195,7 +203,13 @@ ApplicationWindow {
         }
 
         function disassemble(address, callback) {
-            _request("function:disassemble", [ address ], callback);
+            _r2Requests.push(callback);
+            r2.execute("s 0x" + address.toString(16) + "; af; pdf");
+        }
+
+        function _onR2Response(response) {
+            const callback = _r2Requests.shift();
+            callback(response);
         }
 
         function _request(name, args, callback = _noop) {

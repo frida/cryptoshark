@@ -1,6 +1,7 @@
 #include "config.h"
 #include "models.h"
 #include "nativepointer.h"
+#include "radare.h"
 #include "router.h"
 
 #include <QApplication>
@@ -70,6 +71,7 @@ int main(int argc, char *argv[])
         {"exampleRemoteProgram", CRYPTOSHARK_EXAMPLE_REMOTE_PROGRAM},
     });
     root->setContextProperty("fixedFont", fixedFont);
+    root->setContextProperty("r2", RadareController::instance());
 #ifdef CRYPTOSHARK_STATIC_QT
     engine.setImportPathList(QStringList(QStringLiteral("qrc:/qt-project.org/imports")));
 #else
