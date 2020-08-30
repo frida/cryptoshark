@@ -1,5 +1,5 @@
-import { Disassembler } from "./disassembler";
-import { Service, RequestHandler } from "./interfaces";
+import { Service } from "./interfaces";
+import { MemoryApi } from "./memory-api";
 import { ModuleMonitor } from "./module-monitor";
 import { ThreadMonitor } from "./thread-monitor";
 import { ThreadTracer } from "./thread-tracer";
@@ -13,10 +13,10 @@ class Agent {
         const moduleMap = new ModuleMap();
 
         this.services.push(
+            new MemoryApi(),
             new ModuleMonitor(moduleMap),
             new ThreadMonitor(),
             new ThreadTracer(moduleMap),
-            new Disassembler(),
         );
 
         this.exports.dispose = this.dispose.bind(this);
@@ -25,6 +25,16 @@ class Agent {
                 this.exports[name] = handler.bind(service);
             }
         }
+
+        const { platform, arch, pointerSize } = Process;
+        send({
+            name: "agent:ready",
+            payload: {
+                platform,
+                arch,
+                pointerSize
+            }
+        });
     }
 
     dispose() {

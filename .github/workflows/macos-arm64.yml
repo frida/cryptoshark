@@ -3,6 +3,8 @@ name: macOS arm64
 on:
   push:
     branches: [master]
+  pull_request:
+    branches: [master]
 
 jobs:
   build:
@@ -14,17 +16,38 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Resolve Qt Prefix
-      id: resolve-qt-prefix
+    - name: Perform Cleanup
       run: |
-        echo "::set-output name=path::$(cd "$GITHUB_WORKSPACE/../" && pwd)/dist"
+        git clean -xffd
+        git submodule foreach "git clean -xffd"
+        rm -rf ../build* ../dist ../qt5
+
+    - name: Detect Parameters
+      id: detect-parameters
+      run: |
+        echo "::set-output name=radare_commit::$(git submodule status ext/radare2 | cut -f2 -d' ')"
+        echo "::set-output name=radare_prefix::$(pwd)/ext/radare2/build/priv_install_dir"
+        echo "::set-output name=qt_prefix::$(cd "$GITHUB_WORKSPACE/../" && pwd)/dist"
       shell: bash
+
+    - name: Cache Radare
+      id: cache-radare
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.detect-parameters.outputs.radare_prefix }}
+        key: radare-${{ steps.detect-parameters.outputs.radare_commit }}-macos-arm64-1
+
+    - name: Build Radare
+      if: steps.cache-radare.outputs.cache-hit != 'true'
+      run: |
+        . tools/macos/activate-env
+        tools/unix/build-radare
 
     - name: Cache Qt
       id: cache-qt
       uses: actions/cache@v2
       with:
-        path: ${{ steps.resolve-qt-prefix.outputs.path }}
+        path: ${{ steps.detect-parameters.outputs.qt_prefix }}
         key: qt5-macos-arm64
 
     - name: Build Qt

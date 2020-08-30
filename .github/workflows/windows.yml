@@ -20,19 +20,44 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Resolve Qt Prefix
-      id: resolve-qt-prefix
+    - name: Detect Parameters
+      id: detect-parameters
       run: |
+        for /F "tokens=1" %%A in ('"git submodule status ext\radare2"') DO (
+          echo ::set-output name=radare_commit::%%A
+        )
+        echo ::set-output name=radare_prefix::%cd%\ext\radare2\build\priv_install_dir
         cd ..
-        echo Setting path=%cd%\dist
-        echo ::set-output name=path::%cd%\dist
+        echo ::set-output name=qt_prefix::%cd%\dist
+      shell: cmd
+
+    - name: Cache Radare
+      id: cache-radare
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.detect-parameters.outputs.radare_prefix }}
+        key: radare-${{ steps.detect-parameters.outputs.radare_commit }}-windows-x86_64
+
+    - name: Setup Python
+      if: steps.cache-radare.outputs.cache-hit != 'true'
+      uses: actions/setup-python@v2
+
+    - name: Install Meson and Ninja
+      if: steps.cache-radare.outputs.cache-hit != 'true'
+      run: pip install meson ninja
+
+    - name: Build Radare
+      if: steps.cache-radare.outputs.cache-hit != 'true'
+      run: |
+        call tools\windows\activate-env x86_64
+        call build-radare
       shell: cmd
 
     - name: Cache Qt
       id: cache-qt
       uses: actions/cache@v2
       with:
-        path: ${{ steps.resolve-qt-prefix.outputs.path }}
+        path: ${{ steps.detect-parameters.outputs.qt_prefix }}
         key: qt5-windows-x86_64
 
     - name: Build Qt

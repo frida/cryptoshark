@@ -32,6 +32,9 @@ public:
         return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren;
     }
 
+signals:
+    void synchronized(Module *module);
+
 private:
     void sortByCallsDescending();
 
@@ -43,6 +46,9 @@ private:
     QSqlQuery m_insert;
     QSqlQuery m_update;
     QSqlQuery m_addCalls;
+    QSqlQuery m_getFunctionEntries;
+
+    friend class Module;
 };
 
 class Module : public QObject
@@ -81,6 +87,8 @@ public:
     quint64 base() const { return m_base; }
     bool main() const { return m_main; }
     int calls() const { return m_calls; }
+
+    void enumerateFunctionEntries(std::function<void (QString, quint64)> f);
 
 signals:
     void pathChanged(QString newPath);

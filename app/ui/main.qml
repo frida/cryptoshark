@@ -176,10 +176,12 @@ ApplicationWindow {
 
         property var _requests: Object()
         property var _nextRequestId: 1
+        property var _radareRequests: ({})
 
         Component.onCompleted: {
             Router.attach(this);
             Router.message.connect(_onMessage);
+            radare.executeResponse.connect(_onRadareResponse);
         }
 
         onError: {
@@ -194,8 +196,27 @@ ApplicationWindow {
             _request("thread:unfollow", [ threadId ], callback);
         }
 
-        function disassemble(address, callback) {
-            _request("function:disassemble", [ address ], callback);
+        function disassemble(func, callback) {
+            executeRadareCommand([
+                "s 0x" + func.address.toString(16),
+                "af-",
+                "af",
+                "afn base64:" + Qt.btoa(func.name),
+                "pdf",
+            ].join("; "), callback);
+        }
+
+        function executeRadareCommand(command, callback) {
+            const id = radare.execute(command);
+            _radareRequests[id] = callback;
+        }
+
+        function _onRadareResponse(response, requestId) {
+            const callback = _radareRequests[requestId];
+            if (callback === undefined)
+                return;
+            delete _radareRequests[requestId];
+            callback(response);
         }
 
         function _request(name, args, callback = _noop) {

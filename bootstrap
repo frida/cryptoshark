@@ -6,7 +6,25 @@ cd "$(dirname $0)"
 
 platform=$(tools/unix/detect-platform)
 arch=$1
-[ -z "$arch" ] && arch=$(tools/unix/detect-arch)
+if [ -z "$arch" ]; then
+  if [ -n "$CRYPTOSHARK_ARCH" ]; then
+    arch=$CRYPTOSHARK_ARCH
+  else
+    arch=$(tools/unix/detect-arch)
+  fi
+fi
+if [ -z "$CRYPTOSHARK_ARCH" ]; then
+  . tools/$platform/activate-env || exit $?
+fi
+
+if [ ! -f ext/frida-qml/frida-qml.pri ]; then
+  echo ""
+  echo "***"
+  echo "*** Fetching submodules"
+  echo "***"
+  git submodule init
+  git submodule update || exit $?
+fi
 
 devkit_url="https://github.com/frida/frida/releases/download/$frida_version/frida-core-devkit-$frida_version-$platform-$arch.tar.xz"
 devkit_dir="ext/frida-core/$arch"
@@ -24,19 +42,18 @@ if [ ! -f "$devkit_dir/libfrida-core.a" ]; then
   popd > /dev/null
 fi
 
-if [ ! -f ext/frida-qml/frida-qml.pri ]; then
+if [ ! -f ext/radare2/build/priv_install_dir/lib/libr_core.a ]; then
   echo ""
   echo "***"
-  echo "*** Fetching frida-qml"
+  echo "*** Building Radare"
   echo "***"
-  git submodule init
-  git submodule update || exit $?
+  tools/unix/build-radare || exit $?
 fi
 
 if [ ! -f app/agent.js ]; then
   echo ""
   echo "***"
-  echo "*** Building agent"
+  echo "*** Building Agent"
   echo "***"
   pushd app/agent > /dev/null
   npm install || exit $?

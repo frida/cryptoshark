@@ -1,3 +1,6 @@
 [submodule "ext/frida-qml"]
 	path = ext/frida-qml
 	url = https://github.com/frida/frida-qml.git
+[submodule "ext/radare2"]
+	path = ext/radare2
+	url = https://github.com/radareorg/radare2.git

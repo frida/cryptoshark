@@ -1,0 +1,43 @@
+#!/bin/sh
+
+cd "$CRYPTOSHARK_SRCDIR"
+
+builddir=$1
+if [ -z "$builddir" ]; then
+  builddir=$(pwd)/ext/radare2/build
+fi
+
+if [ ! -d "$builddir" ]; then
+  cd ext/radare2
+
+  cflags=""
+  if [ "$(uname -s)" = "Darwin" ]; then
+    case $CRYPTOSHARK_ARCH in
+      arm64*)
+        macos_minver="11.00"
+        ;;
+      *)
+        macos_minver="10.13"
+        ;;
+    esac
+    cflags="-arch $CRYPTOSHARK_ARCH -mmacosx-version-min=$macos_minver"
+  fi
+
+  CFLAGS="$cflags" meson setup "$builddir" \
+      --prefix="$builddir/priv_install_dir" \
+      --libdir=lib \
+      --backend=ninja \
+      --default-library=static \
+      -Doptimization=s \
+      -Db_ndebug=true \
+      -Dcli=disabled \
+      -Duse_capstone_version=v5 \
+      -Duse_libuv=false \
+      -Duse_sys_magic=false \
+      -Ddebugger=false \
+      -Denable_tests=false \
+      -Denable_r2r=false \
+      || exit $?
+fi
+
+ninja -C "$builddir" install

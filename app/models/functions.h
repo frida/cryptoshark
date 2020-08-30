@@ -46,7 +46,9 @@ public:
     }
 
 signals:
-    void logMessage(Function *function, QString message);
+    void discovered(QString name, int offset, Module *module);
+    void renamed(Function *func);
+    void logMessage(Function *func, QString message);
 
 private:
     void sortByCallsDescending();

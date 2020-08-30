@@ -12,8 +12,20 @@ if "!__CS_ARCH!" == "" (
     set __CS_ARCH=x86_64
   )
 )
+if not defined CRYPTOSHARK_ARCH (
+  call %~dp0tools\windows\activate-env.bat !__CS_ARCH! || exit /b
+)
 
 pushd %~dp0
+
+if not exist ext\frida-qml\frida-qml.pri (
+  echo.
+  echo ***
+  echo *** Fetching submodules
+  echo ***
+  git submodule init
+  git submodule update || exit /b
+)
 
 set __CS_DEVKITURL=https://github.com/frida/frida/releases/download/!__CS_FRIDA_VERSION!/frida-core-devkit-!__CS_FRIDA_VERSION!-windows-!__CS_ARCH!.exe
 set __CS_DEVKITDIR=ext\frida-core\!__CS_ARCH!
@@ -32,19 +44,18 @@ if not exist !__CS_DEVKITDIR!\frida-core.lib (
   popd
 )
 
-if not exist ext\frida-qml\frida-qml.pri (
+if not exist ext\radare2\build\priv_install_dir\lib\libr_core.a (
   echo.
   echo ***
-  echo *** Fetching frida-qml
+  echo *** Building Radare
   echo ***
-  git submodule init
-  git submodule update || exit /b
+  call tools\windows\build-radare.bat || exit /b
 )
 
 if not exist app\agent.js (
   echo.
   echo ***
-  echo *** Building agent
+  echo *** Building Agent
   echo ***
   pushd app\agent
   npm install || exit /b

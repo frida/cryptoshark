@@ -20,6 +20,7 @@ SOURCES += \
     models.cpp \
     models/functions.cpp \
     models/modules.cpp \
+    radare.cpp \
     router.cpp
 
 RESOURCES += app.qrc
@@ -36,6 +37,7 @@ HEADERS += \
     models.h \
     models/functions.h \
     models/modules.h \
+    radare.h \
     router.h
 
 QMAKE_SUBSTITUTES += config.h.in
@@ -66,6 +68,46 @@ cryptoshark_static_qt {
 
     win32 {
         QMAKE_LFLAGS += /LTCG
+    }
+}
+
+INCLUDEPATH += \
+    $$OUT_PWD \
+    $${RADARE_PREFIX}/include/libr \
+    $${RADARE_PREFIX}/include/libr/sdb
+LIBS_PRIVATE += \
+    -L$${RADARE_PREFIX}/lib
+radare_libs = \
+    anal \
+    asm \
+    bin \
+    bp \
+    config \
+    cons \
+    core \
+    crypto \
+    debug \
+    egg \
+    flag \
+    fs \
+    hash \
+    io \
+    lang \
+    magic \
+    parse \
+    reg \
+    search \
+    socket \
+    syscall \
+    util
+win32 {
+    for (name, radare_libs) {
+        eval(LIBS_PRIVATE += libr_$${name}.a)
+    }
+    LIBS_PRIVATE += advapi32.lib wininet.lib ws2_32.lib
+} else {
+    for (name, radare_libs) {
+        eval(LIBS_PRIVATE += -lr_$$name)
     }
 }
 
