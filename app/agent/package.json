@@ -24,7 +24,7 @@
   "scripts": {
     "prepare": "npm run build",
     "build": "frida-compile index.ts -o ../agent.js -xXc",
-    "watch": "frida-compile index.ts -o ../agent.js -xXcw"
+    "watch": "frida-compile index.ts -o ../agent.js -xXw"
   },
   "devDependencies": {
     "@types/frida-gum": "^16.1.0",
