@@ -188,42 +188,70 @@ ApplicationWindow {
         }
 
         function follow(threadId, callback) {
-            _request("thread:follow", { id: threadId }, callback);
+            _request("thread:follow", [ threadId ], callback);
         }
 
         function unfollow(threadId, callback) {
-            _request("thread:unfollow", { id: threadId }, callback);
+            _request("thread:unfollow", [ threadId ], callback);
         }
 
         function disassemble(address, callback) {
-            _request("function:disassemble", { address: address }, callback);
+            _request("function:disassemble", [ address ], callback);
         }
 
-        function _request(name, payload, callback) {
-            if (callback === undefined) {
-                callback = _noop;
-            }
-
+        function _request(name, args, callback = _noop) {
             const id = "a" + _nextRequestId++;
             _requests[id] = callback;
-            post({ id: id, name: name, payload: payload });
+            post([
+                "frida:rpc",
+                id,
+                "call",
+                name,
+                args
+            ]);
         }
 
-        function _onResponse(id, type, payload) {
+        function _tryHandleRpcReply(params, data) {
+            if (params.length < 4 || params[0] !== "frida:rpc")
+                return false;
+
+            const id = params[1];
             const callback = _requests[id];
+            if (callback === undefined)
+                return true;
             delete _requests[id];
 
-            let result, error;
-            if (type === "result") {
-                result = payload;
-                error = null;
+            const type = params[2];
+            if (type === "ok") {
+                if (data === undefined)
+                    callback(null, params[3]);
+                else
+                    callback(null, data);
             } else {
-                result = null;
-                error = new Error(payload.message);
-                error.stack = payload.stack;
+                const e = new Error(params[3]);
+                e.name = params[4];
+                e.stack = params[5];
+                callback(e, null);
             }
 
-            callback(error, result);
+            return true;
+        }
+
+        function _tryHandleStanza(stanza) {
+            const { name, payload } = stanza;
+
+            switch (name) {
+                case "threads:update":
+                    _onThreadsUpdate(payload);
+                    break;
+                case "thread:update":
+                    _onThreadUpdate(payload);
+                    break;
+                default:
+                    return false;
+            }
+
+            return true;
         }
 
         function _onThreadsUpdate(updatedThreads) {
@@ -245,29 +273,20 @@ ApplicationWindow {
             }
         }
 
-        function _onMessage(object) {
-            if (object.type === "send") {
-                const stanza = object.payload;
-                const name = stanza.name;
-                const payload = stanza.payload;
+        function _onMessage(message, data) {
+            if (message.type === "send") {
+                const p = message.payload;
 
-                switch (name) {
-                    case "threads:update":
-                        _onThreadsUpdate(payload);
-                        break;
-                    case "thread:update":
-                        _onThreadUpdate(payload);
-                        break;
-                    case "result":
-                    case "error":
-                        _onResponse(stanza.id, name, payload);
-                        break;
-                    default:
-                         console.log("Unhandled: " + JSON.stringify(stanza));
-                         break;
-                }
+                let handled;
+                if (p instanceof Array)
+                    handled = _tryHandleRpcReply(p, data);
+                else
+                    handled = _tryHandleStanza(p);
+
+                if (!handled)
+                    console.log("Unhandled: " + JSON.stringify(p));
             } else {
-                console.log("ERROR: " + JSON.stringify(object));
+                console.log("ERROR: " + JSON.stringify(message));
             }
         }
 

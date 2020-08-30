@@ -2,6 +2,7 @@
 #define ROUTER_H
 
 #include <QHash>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QMetaMethod>
 #include <QObject>
@@ -22,19 +23,25 @@ public:
     static Router *instance();
 
     Q_INVOKABLE void attach(QObject *agent);
-    Request *request(QString name, QJsonObject payload);
+    Request *request(QString name, QJsonArray args);
 
 signals:
-    void message(QJsonObject object);
+    void message(QJsonObject object, QVariant data);
 
 public slots:
     void onMessage(ScriptInstance *sender, QJsonObject object, QVariant data);
 
+private slots:
+    void beginRequest(Request *request);
+
 private:
+    bool tryHandleStanza(QJsonObject stanza);
+    bool tryHandleRpcReply(QJsonArray params, QVariant data);
+
     QObject *m_agent;
     QMetaMethod m_postMethod;
     QHash<QString, Request *> m_requests;
-    int m_nextRequestId;
+    QAtomicInt m_nextRequestId;
 
     static Router *s_instance;
 };
@@ -45,13 +52,20 @@ class Request : public QObject
     Q_DISABLE_COPY_MOVE(Request)
 
 public:
-    Request(QObject *parent = 0);
+    Request(QString id, QString name, QJsonArray args, QObject *parent = nullptr);
+
+    QString id() const { return m_id; }
+    QJsonArray payload() const { return m_payload; }
 
 protected:
-    void complete(QJsonValue result, RequestError *error);
+    void complete(QVariant result, RequestError *error);
 
 signals:
-    void completed(QJsonValue result, RequestError *error);
+    void completed(QVariant result, RequestError *error);
+
+private:
+    QString m_id;
+    QJsonArray m_payload;
 
     friend class Router;
 };

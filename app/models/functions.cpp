@@ -115,11 +115,11 @@ void Functions::addProbe(int functionId)
 
     notifyRowChange(function);
 
-    QJsonObject payload;
-    payload[QStringLiteral("id")] = function->id();
-    payload[QStringLiteral("address")] = function->address();
-    payload[QStringLiteral("script")] = function->probeScript();
-    Router::instance()->request(QStringLiteral("function:add-probe"), payload);
+    Router::instance()->request(QStringLiteral("function:add-probe"), {
+                                    function->id(),
+                                    function->address(),
+                                    function->probeScript()
+                                });
 }
 
 void Functions::removeProbe(int functionId)
@@ -133,9 +133,9 @@ void Functions::removeProbe(int functionId)
 
     notifyRowChange(function);
 
-    QJsonObject payload;
-    payload[QStringLiteral("address")] = function->address();
-    Router::instance()->request(QStringLiteral("function:remove-probe"), payload);
+    Router::instance()->request(QStringLiteral("function:remove-probe"), {
+                                    function->address()
+                                });
 }
 
 void Functions::updateProbe(int functionId, QString script)
@@ -154,10 +154,10 @@ void Functions::updateProbe(int functionId, QString script)
     notifyRowChange(function);
 
     if (function->m_probeActive) {
-        QJsonObject payload;
-        payload[QStringLiteral("address")] = function->address();
-        payload[QStringLiteral("script")] = function->probeScript();
-        Router::instance()->request(QStringLiteral("function:update-probe"), payload);
+        Router::instance()->request(QStringLiteral("function:update-probe"), {
+                                        function->address(),
+                                        function->probeScript()
+                                    });
     }
 }
 
@@ -165,12 +165,9 @@ void Functions::symbolicate(int moduleId)
 {
     auto router = Router::instance();
 
-    QJsonObject payload;
-
     auto module = Models::instance()->modules()->getById(moduleId);
     if (module == nullptr)
         return;
-    payload[QStringLiteral("module")] = module->path();
 
     QVector<int> ids;
     QJsonArray offsets;
@@ -183,17 +180,19 @@ void Functions::symbolicate(int moduleId)
         offsets += QJsonValue(offset);
     }
     m_getUnexported.finish();
-    payload[QStringLiteral("offsets")] = offsets;
 
-    auto request = router->request(QStringLiteral("module:symbolicate"), payload);
-    QObject::connect(request, &Request::completed, [=] (QJsonValue result, RequestError *error) {
+    auto request = router->request(QStringLiteral("module:symbolicate"), {
+                                       module->path(),
+                                       offsets
+                                   });
+    QObject::connect(request, &Request::completed, [=] (QVariant result, RequestError *error) {
         if (error != nullptr)
             return;
 
         m_database.transaction();
 
         int i = 0;
-        foreach (auto nameValue, result.toArray()) {
+        foreach (auto nameValue, result.toJsonArray()) {
             if (!nameValue.isNull()) {
                 int id = ids[i];
 
@@ -402,17 +401,17 @@ void Functions::importModuleExports(QList<int> moduleIds)
         m_importedModules += moduleId;
 
         if (importNeeded) {
-            QJsonObject payload;
-            payload[QStringLiteral("name")] = modules->getById(moduleId)->name();
-            auto request = router->request(QStringLiteral("module:get-functions"), payload);
-            QObject::connect(request, &Request::completed, [=] (QJsonValue result, RequestError *error) {
+            auto request = router->request(QStringLiteral("module:get-functions"), {
+                                               modules->getById(moduleId)->name()
+                                           });
+            QObject::connect(request, &Request::completed, [=] (QVariant result, RequestError *error) {
                 if (error != nullptr) {
                     return;
                 }
 
                 m_database.transaction();
 
-                auto functions = result.toArray();
+                auto functions = result.toJsonArray();
                 foreach (auto funcValue, functions) {
                     auto func = funcValue.toArray();
                     auto name = func.at(0).toString();

@@ -14,8 +14,7 @@ export class ThreadTracer implements Service {
     constructor(private moduleMap: ModuleMap) {
     }
 
-    follow(thread: ThreadRef) {
-        const { id: threadId } = thread;
+    follow(threadId: ThreadId) {
         const moduleMap = this.moduleMap;
 
         Stalker.follow(threadId, {
@@ -55,22 +54,20 @@ export class ThreadTracer implements Service {
         });
     }
 
-    unfollow(thread: ThreadRef) {
-        Stalker.unfollow(thread.id);
+    unfollow(threadId: ThreadId) {
+        Stalker.unfollow(threadId);
     }
 
-    addProbe(spec: ProbeSpec) {
-        const { address } = spec;
-
+    addProbe(handlerId: ProbeHandlerId, address: FunctionAddress, script: string) {
         let probe = this.probes.get(address);
         if (probe !== undefined) {
             throw new Error("Probe already exists");
         }
 
-        const handler = parseHandler(spec.script);
+        const handler = parseHandler(script);
 
         const handlerHolder: ProbeHandlerHolder = [handler];
-        const id = Stalker.addCallProbe(ptr(address), makeProbeCallback(spec.id, handlerHolder));
+        const id = Stalker.addCallProbe(ptr(address), makeProbeCallback(handlerId, handlerHolder));
         probe = {
             id,
             handlerHolder
@@ -80,9 +77,7 @@ export class ThreadTracer implements Service {
         return probe.id;
     }
 
-    removeProbe(ref: ProbeRef) {
-        const { address } = ref;
-
+    removeProbe(address: FunctionAddress) {
         const probe = this.probes.get(address);
         if (probe === undefined) {
             throw new Error("No such probe");
@@ -93,21 +88,15 @@ export class ThreadTracer implements Service {
         this.probes.delete(address);
     }
 
-    updateProbe(func: ProbeSpec) {
-        const { address } = func;
-
+    updateProbe(address: FunctionAddress, script: string) {
         const probe = this.probes.get(address);
         if (probe === undefined) {
             throw new Error("No such probe");
         }
 
-        probe.handlerHolder[0] = parseHandler(func.script);
+        probe.handlerHolder[0] = parseHandler(script);
     }
 };
-
-export interface ThreadRef {
-    id: ThreadId;
-}
 
 export interface ThreadSummary {
     [address: string]: CallTarget;
@@ -126,16 +115,6 @@ export interface ModuleSymbol {
 export type ModuleName = string;
 
 export type FunctionAddress = string;
-
-export interface ProbeSpec {
-    id: ProbeHandlerId;
-    address: FunctionAddress;
-    script: string;
-}
-
-export interface ProbeRef {
-    address: string;
-}
 
 interface Probe {
     id: ProbeId;

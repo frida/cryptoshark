@@ -30,7 +30,7 @@ void Router::attach(QObject *agent)
     auto agentMeta = agent->metaObject();
 
     m_agent = agent;
-    m_postMethod = agentMeta->method(agentMeta->indexOfMethod("post(QJsonObject)"));
+    m_postMethod = agentMeta->method(agentMeta->indexOfMethod("post(QJsonArray)"));
 
     auto agentMessageSignal = agentMeta->method(agentMeta->indexOfSignal("message(ScriptInstance*,QJsonObject,QVariant)"));
     auto routerMeta = metaObject();
@@ -38,84 +38,110 @@ void Router::attach(QObject *agent)
     connect(agent, agentMessageSignal, this, routerOnMessageSlot);
 }
 
-Request *Router::request(QString name, QJsonObject payload)
+Request *Router::request(QString name, QJsonArray args)
 {
     auto id = QString("r") + QString::number(m_nextRequestId++);
+    auto request = new Request(id, name, args);
+    QObject::connect(request, &Request::completed, request, &QObject::deleteLater);
 
-    auto request = new Request(this);
-    m_requests[id] = request;
-
-    auto message = QJsonObject();
-    message[QStringLiteral("id")] = id;
-    message[QStringLiteral("name")] = name;
-    message[QStringLiteral("payload")] = payload;
-    m_postMethod.invoke(m_agent, Q_ARG(QJsonObject, message));
+    QMetaObject::invokeMethod(this, "beginRequest", Qt::QueuedConnection,
+        Q_ARG(Request *, request));
 
     return request;
+}
+
+void Router::beginRequest(Request *request)
+{
+    m_requests[request->id()] = request;
+    m_postMethod.invoke(m_agent, Q_ARG(QJsonArray, request->payload()));
 }
 
 void Router::onMessage(ScriptInstance *sender, QJsonObject object, QVariant data)
 {
     Q_UNUSED(sender);
-    Q_UNUSED(data);
 
     bool handled = false;
 
     if (object[QStringLiteral("type")] == QStringLiteral("send")) {
-        auto stanza = object[QStringLiteral("payload")].toObject();
-        auto name = stanza[QStringLiteral("name")];
-
-        const bool isResult = name == QStringLiteral("result");
-        if (isResult || name == QStringLiteral("error")) {
-            auto idValue = stanza[QStringLiteral("id")];
-            auto id = idValue.toString();
-
-            auto request = m_requests[id];
-            if (request != nullptr) {
-                m_requests.remove(id);
-
-                auto payload = stanza[QStringLiteral("payload")];
-
-                if (isResult) {
-                    request->complete(payload, nullptr);
-                } else {
-                    auto errorValue = payload.toObject();
-                    auto message = errorValue[QStringLiteral("message")].toString();
-                    auto stack = errorValue[QStringLiteral("stack")].toString();
-                    RequestError error(message, stack);
-                    request->complete(QJsonValue(), &error);
-                }
-
-                handled = true;
-            }
-        } else if (name == QStringLiteral("modules:update")) {
-            Models::instance()->modules()->update(stanza[QStringLiteral("payload")].toArray());
-            handled = true;
-        } else if (name == QStringLiteral("thread:summary")) {
-            auto update = stanza[QStringLiteral("payload")].toObject();
-            auto summary = update[QStringLiteral("summary")].toObject();
-            Models::instance()->functions()->addCalls(summary);
-            handled = true;
-        } else if (name == QStringLiteral("function:log")) {
-            auto entry = stanza[QStringLiteral("payload")].toObject();
-            auto id = entry[QStringLiteral("id")].toInt();
-            auto message = entry[QStringLiteral("message")].toString();
-            Models::instance()->functions()->addLogMessage(id, message);
-            handled = true;
+        auto payload = object[QStringLiteral("payload")];
+        if (payload.isArray()) {
+            handled = tryHandleRpcReply(payload.toArray(), data);
+        } else if (payload.isObject()) {
+            handled = tryHandleStanza(payload.toObject());
         }
     }
 
     if (!handled)
-        emit message(object);
+        emit message(object, data);
 }
 
-Request::Request(QObject *parent) :
-    QObject(parent)
+bool Router::tryHandleStanza(QJsonObject stanza)
 {
-    connect(this, &Request::completed, this, &Request::deleteLater);
+    auto name = stanza[QStringLiteral("name")];
+
+    if (name == QStringLiteral("modules:update")) {
+        Models::instance()->modules()->update(stanza[QStringLiteral("payload")].toArray());
+        return true;
+    } else if (name == QStringLiteral("thread:summary")) {
+        auto update = stanza[QStringLiteral("payload")].toObject();
+        auto summary = update[QStringLiteral("summary")].toObject();
+        Models::instance()->functions()->addCalls(summary);
+        return true;
+    } else if (name == QStringLiteral("function:log")) {
+        auto entry = stanza[QStringLiteral("payload")].toObject();
+        auto id = entry[QStringLiteral("id")].toInt();
+        auto message = entry[QStringLiteral("message")].toString();
+        Models::instance()->functions()->addLogMessage(id, message);
+        return true;
+    }
+
+    return false;
 }
 
-void Request::complete(QJsonValue result, RequestError *error)
+bool Router::tryHandleRpcReply(QJsonArray params, QVariant data)
+{
+    if (params.count() < 4)
+        return false;
+
+    if (params[0].toString() != "frida:rpc")
+        return false;
+
+    auto id = params[1].toString();
+    auto request = m_requests[id];
+    if (request == nullptr)
+        return false;
+    m_requests.remove(id);
+
+    auto type = params[2].toString();
+    if (type == "ok") {
+        if (data.isNull())
+            request->complete(params[3].toVariant(), nullptr);
+        else
+            request->complete(data, nullptr);
+    } else {
+        auto message = params[3].toString();
+        auto stack = params[5].toString();
+        RequestError error(message, stack);
+        request->complete(QJsonValue(), &error);
+    }
+
+    return true;
+}
+
+Request::Request(QString id, QString name, QJsonArray args, QObject *parent) :
+    QObject(parent),
+    m_id(id)
+{
+    m_payload = {
+        "frida:rpc",
+        id,
+        "call",
+        name,
+        args
+    };
+}
+
+void Request::complete(QVariant result, RequestError *error)
 {
     emit completed(result, error);
 }

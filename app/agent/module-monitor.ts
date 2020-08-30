@@ -30,7 +30,7 @@ export class ModuleMonitor implements Service {
         });
     }
 
-    getFunctions({ name }: ModuleRef): ModuleFunction[] {
+    getFunctions(name: string): ModuleFunction[] {
         const m = find(this.moduleMap.values(), m => m.name === name);
         if (m === undefined) {
             throw new Error(`Module “${name}” not in map`);
@@ -42,7 +42,7 @@ export class ModuleMonitor implements Service {
             .map(e => [e.name, e.address.sub(base).toInt32()]);
     }
 
-    symbolicate({ module, offsets }: ResolveSymbolsQuery): ResolveSymbolsResult[] {
+    symbolicate(module: string, offsets: number[]): SymbolicateResult[] {
         const m = find(this.moduleMap.values(), m => m.path === module);
         if (m === undefined) {
             throw new Error(`Module “${module}” not in map`);
@@ -53,20 +53,11 @@ export class ModuleMonitor implements Service {
     }
 }
 
-export interface ModuleRef {
-    name: string;
-}
-
 export type ModuleFunction = [ModuleFunctionName, ModuleRelativeOffset];
 export type ModuleFunctionName = string;
 export type ModuleRelativeOffset = number;
 
-export interface ResolveSymbolsQuery {
-    module: string;
-    offsets: number[];
-}
-
-export type ResolveSymbolsResult = string | null;
+export type SymbolicateResult = string | null;
 
 interface EnrichedModule {
     name: string;

@@ -10,10 +10,10 @@ export class Disassembler implements Service {
         "function:disassemble": this.disassemble
     };
 
-    disassemble(func: FunctionRef): Instruction[] {
+    disassemble(rawAddress: string): Instruction[] {
         const result: Instruction[] = [];
 
-        let address = ptr(func.address);
+        let address = ptr(rawAddress);
         do {
             const insn = Instruction.parse(address);
             if (insn === null) {
@@ -30,8 +30,4 @@ export class Disassembler implements Service {
 
         return result;
     }
-}
-
-export interface FunctionRef {
-    address: string;
 }
