@@ -22,10 +22,6 @@ SplitView {
 
     property var _scriptInstance: agentService.instances[0] ?? null
 
-    function dispose() {
-        log.dispose();
-    }
-
     onCurrentModuleChanged: {
         models.functions.load(currentModule !== null ? currentModule.id : -1);
         functionsView.currentRow = -1;
@@ -331,9 +327,11 @@ SplitView {
                     functionDialog.rename.connect(_onRename);
                 }
 
-                function dispose() {
+                Component.onDestruction: {
                     functionDialog.rename.disconnect(_onRename);
-                    models.functions.logMessage.disconnect(_onLogMessage);
+                    const functions = models.functions;
+                    if (functions !== null)
+                        functions.logMessage.disconnect(_onLogMessage);
                 }
 
                 function _onLogMessage(func, message) {

@@ -40,7 +40,6 @@ ApplicationWindow {
     }
 
     function endSession() {
-        loader.item.dispose();
         if (agent.instances.length > 0)
             agent.instances[0].stop();
         _endReason = null;
