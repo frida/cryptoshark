@@ -202,9 +202,14 @@ ApplicationWindow {
             _request("thread:unfollow", [ threadId ], callback);
         }
 
-        function disassemble(address, callback) {
+        function disassemble(func, callback) {
             _r2Requests.push(callback);
-            r2.execute("s 0x" + address.toString(16) + "; af; pdf");
+            r2.execute([
+                "s 0x" + func.address.toString(16),
+                "af",
+                "afn base64:" + Qt.btoa(func.name),
+                "pdf",
+            ].join("; "));
         }
 
         function _onR2Response(response) {

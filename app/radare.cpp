@@ -177,6 +177,8 @@ void RadareWorker::handleExecuteRequest(QString command, int requestId)
         RConfig *config = m_core->config;
         r_config_set(config, "scr.html", "true");
         r_config_set_i(config, "scr.color", COLOR_MODE_16M);
+        r_config_set(config, "asm.emu", "true");
+        r_config_set(config, "emu.str", "true");
 
         m_state = State::Initialized;
     }

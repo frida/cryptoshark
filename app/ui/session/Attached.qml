@@ -38,7 +38,7 @@ SplitView {
         if (func) {
             disassembly.text = "";
             disassembly.loading = true;
-            agentService.disassemble(func.address, text => {
+            agentService.disassemble(func, text => {
                 disassembly.text = text;
                 disassembly.loading = false;
             });
@@ -334,7 +334,7 @@ SplitView {
 
                 function _onLogMessage(func, message) {
                     const lengthBefore = length;
-                    log.append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
+                    append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
                     const lengthAfter = length;
                     const lineLength = lengthAfter - lengthBefore;
                     _lineLengths.push(lineLength);
