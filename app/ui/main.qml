@@ -203,13 +203,17 @@ ApplicationWindow {
         }
 
         function disassemble(func, callback) {
-            _r2Requests.push(callback);
-            r2.execute([
+            executeRadareCommand([
                 "s 0x" + func.address.toString(16),
                 "af",
                 "afn base64:" + Qt.btoa(func.name),
                 "pdf",
-            ].join("; "));
+            ].join("; "), callback);
+        }
+
+        function executeRadareCommand(command, callback) {
+            _r2Requests.push(callback);
+            r2.execute(command);
         }
 
         function _onR2Response(response) {

@@ -315,56 +315,91 @@ SplitView {
                 SplitView.fillHeight: true
             }
 
-            TextArea {
-                id: log
+            ColumnLayout {
+                SplitView.fillWidth: true
+                SplitView.minimumHeight: 150
+                SplitView.preferredHeight: 300
 
-                property var _lineLengths: []
+                spacing: 0
 
-                Component.onCompleted: {
-                    models.functions.logMessage.connect(_onLogMessage);
-                    functionDialog.rename.connect(_onRename);
-                }
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
 
-                Component.onDestruction: {
-                    functionDialog.rename.disconnect(_onRename);
-                    const functions = models.functions;
-                    if (functions !== null)
-                        functions.logMessage.disconnect(_onLogMessage);
-                }
+                    TextArea {
+                        id: log
 
-                function _onLogMessage(func, message) {
-                    const lengthBefore = length;
-                    append("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
-                    const lengthAfter = length;
-                    const lineLength = lengthAfter - lengthBefore;
-                    _lineLengths.push(lineLength);
-                    if (_lineLengths.length === 11) {
-                        const firstLineLength = _lineLengths.splice(0, 1)[0];
-                        remove(0, firstLineLength);
+                        property int _bufferLength: 1000
+                        property var _lineLengths: []
+
+                        Component.onCompleted: {
+                            models.functions.logMessage.connect(_onLogMessage);
+                            functionDialog.rename.connect(_onRename);
+                        }
+
+                        Component.onDestruction: {
+                            functionDialog.rename.disconnect(_onRename);
+                            const functions = models.functions;
+                            if (functions !== null)
+                                functions.logMessage.disconnect(_onLogMessage);
+                        }
+
+                        function appendMessage(message) {
+                            message.split("<br />").forEach(line => {
+                                const lengthBefore = length;
+                                append(line);
+                                const lengthAfter = length;
+                                const lineLength = lengthAfter - lengthBefore;
+                                _lineLengths.push(lineLength);
+                                if (_lineLengths.length === _bufferLength + 1) {
+                                    const firstLineLength = _lineLengths.splice(0, 1)[0];
+                                    remove(0, firstLineLength);
+                                }
+                            });
+                        }
+
+                        function _onLogMessage(func, message) {
+                            appendMessage("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
+                        }
+
+                        function _onRename(func, oldName, newName) {
+                            text = text.replace(new RegExp("(<a href=\"" + func.id + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
+                        }
+
+                        onLinkActivated: {
+                            functionDialog.functionId = parseInt(link, 10);
+                            functionDialog.open();
+                        }
+
+                        background: Rectangle {
+                            color: "black"
+                        }
+                        palette.text: "#c7c7c7"
+                        font: fixedFont
+                        textFormat: TextEdit.RichText
+                        wrapMode: TextEdit.NoWrap
+                        readOnly: true
+                        selectByKeyboard: true
+                        selectByMouse: true
                     }
                 }
 
-                function _onRename(func, oldName, newName) {
-                    text = text.replace(new RegExp("(<a href=\"" + func.id + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
-                }
+                TextField {
+                    Layout.fillWidth: true
+                    Layout.margins: 4
 
-                onLinkActivated: {
-                    functionDialog.functionId = parseInt(link, 10);
-                    functionDialog.open();
-                }
+                    onAccepted: {
+                        const command = text;
+                        if (command.length === "")
+                            return;
 
-                SplitView.fillWidth: true
-                SplitView.minimumHeight: 200
-                background: Rectangle {
-                    color: "black"
+                        text = ""
+                        log.appendMessage(command)
+                        agentService.executeRadareCommand(command, result => {
+                                                              log.appendMessage(result);
+                                                          });
+                    }
                 }
-                palette.text: "#c7c7c7"
-                font: fixedFont
-                textFormat: TextEdit.RichText
-                wrapMode: TextEdit.NoWrap
-                readOnly: true
-                selectByKeyboard: true
-                selectByMouse: true
             }
         }
     }
