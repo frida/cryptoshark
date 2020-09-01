@@ -317,7 +317,6 @@ SplitView {
 
             ColumnLayout {
                 SplitView.fillWidth: true
-                SplitView.minimumHeight: 150
                 SplitView.preferredHeight: 300
 
                 spacing: 0
@@ -356,6 +355,8 @@ SplitView {
                                     remove(0, firstLineLength);
                                 }
                             });
+
+                            log.cursorPosition = length;
                         }
 
                         function _onLogMessage(func, message) {
@@ -396,7 +397,8 @@ SplitView {
                         text = ""
                         log.appendMessage(command)
                         agentService.executeRadareCommand(command, result => {
-                                                              log.appendMessage(result);
+                                                              const resultWithoutTrailingLineFeed = result.substr(0, result.lastIndexOf("<br />"));
+                                                              log.appendMessage(resultWithoutTrailingLineFeed);
                                                           });
                     }
                 }
