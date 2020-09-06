@@ -44,6 +44,8 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
     m_update.setForwardOnly(true);
     m_addCalls.prepare(QStringLiteral("UPDATE modules SET calls = calls + ? WHERE id = ?"));
     m_addCalls.setForwardOnly(true);
+    m_getFunctionEntries.prepare(QStringLiteral("SELECT name, offset FROM functions WHERE module = ?"));
+    m_getFunctionEntries.setForwardOnly(true);
 }
 
 Module *Modules::getById(int id)
@@ -92,6 +94,8 @@ void Modules::update(QJsonArray modules)
             m_moduleById[id] = module;
             m_moduleByName[name] = module;
         }
+
+        emit synchronized(module);
     }
 
     m_database.commit();
@@ -200,4 +204,18 @@ QVariant Modules::data(const QModelIndex &index, int role) const
     }
 
     return QVariant();
+}
+
+void Module::enumerateFunctionEntries(std::function<void (QString, quint64)> f)
+{
+    QSqlQuery &query = reinterpret_cast<Modules *>(parent())->m_getFunctionEntries;
+    query.addBindValue(m_id);
+    query.exec();
+    while (query.next()) {
+        QString name = query.value(0).toString();
+        int offset = query.value(1).toInt();
+        quint64 address = m_base + offset;
+        f(name, address);
+    }
+    query.finish();
 }

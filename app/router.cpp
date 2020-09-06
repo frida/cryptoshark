@@ -1,6 +1,7 @@
 #include "router.h"
 
 #include "models.h"
+#include "radare.h"
 
 #include <QMetaMethod>
 
@@ -92,6 +93,13 @@ bool Router::tryHandleStanza(QJsonObject stanza)
         auto id = entry[QStringLiteral("id")].toInt();
         auto message = entry[QStringLiteral("message")].toString();
         Models::instance()->functions()->addLogMessage(id, message);
+        return true;
+    } else if (name == QStringLiteral("agent:ready")) {
+        auto payload = stanza[QStringLiteral("payload")].toObject();
+        auto platform = payload[QStringLiteral("platform")].toString();
+        auto arch = payload[QStringLiteral("arch")].toString();
+        auto pointerSize = payload[QStringLiteral("pointerSize")].toInt();
+        RadareController::instance()->initialize(platform, arch, pointerSize);
         return true;
     }
 

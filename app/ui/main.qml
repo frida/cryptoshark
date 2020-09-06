@@ -182,7 +182,7 @@ ApplicationWindow {
 
         property var _requests: Object()
         property var _nextRequestId: 1
-        property var _r2Requests: []
+        property var _r2Requests: ({})
 
         Component.onCompleted: {
             Router.attach(this);
@@ -205,6 +205,7 @@ ApplicationWindow {
         function disassemble(func, callback) {
             executeRadareCommand([
                 "s 0x" + func.address.toString(16),
+                "af-",
                 "af",
                 "afn base64:" + Qt.btoa(func.name),
                 "pdf",
@@ -212,12 +213,15 @@ ApplicationWindow {
         }
 
         function executeRadareCommand(command, callback) {
-            _r2Requests.push(callback);
-            r2.execute(command);
+            const id = r2.execute(command);
+            _r2Requests[id] = callback;
         }
 
-        function _onR2Response(response) {
-            const callback = _r2Requests.shift();
+        function _onR2Response(response, requestId) {
+            const callback = _r2Requests[requestId];
+            if (callback === undefined)
+                return;
+            delete _r2Requests[requestId];
             callback(response);
         }
 

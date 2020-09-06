@@ -7,6 +7,8 @@
 
 RadareController *RadareController::s_instance = nullptr;
 
+static QString archFromFrida(QString name);
+
 RadareController::RadareController(QObject *parent) :
     QObject(parent),
     m_core(r_core_new()),
@@ -26,9 +28,12 @@ RadareController::RadareController(QObject *parent) :
 
     m_worker->moveToThread(&m_thread);
     connect(&m_thread, &QThread::finished, m_worker, &QObject::deleteLater);
+    connect(this, &RadareController::initializeRequest, m_worker, &RadareWorker::handleInitializeRequest);
     connect(this, &RadareController::executeRequest, m_worker, &RadareWorker::handleExecuteRequest);
     connect(m_worker, &RadareWorker::executeResponse, this, &RadareController::executeResponse);
     m_thread.start();
+
+    connect(Models::instance(), &Models::modulesChanged, this, &RadareController::onModulesChanged);
 }
 
 RadareController::~RadareController()
@@ -47,11 +52,36 @@ RadareController *RadareController::instance()
     return s_instance;
 }
 
+void RadareController::initialize(QString platformName, QString archName, int pointerSize)
+{
+    emit initializeRequest(platformName, archName, pointerSize);
+}
+
 int RadareController::execute(QString command)
 {
     auto id = m_nextRequestId++;
     emit executeRequest(command, id);
     return id;
+}
+
+void RadareController::onModulesChanged(Modules *newModules)
+{
+    if (newModules == nullptr)
+        return;
+
+    connect(newModules, &Modules::synchronized, this, &RadareController::onModuleSynchronized);
+}
+
+void RadareController::onModuleSynchronized(Module *module)
+{
+    QStringList commands;
+    module->enumerateFunctionEntries([&] (QString name, quint64 address) {
+        // TODO: Use API instead, which is faster and means we don't have to quote the name – a detail ignored here.
+        commands << QStringLiteral("af+ 0x") + QString::number(address, 16) + QStringLiteral(" ") + name;
+    });
+    if (commands.empty())
+        return;
+    execute(commands.join(';'));
 }
 
 RIODesc *RadareController::onOpenWrapper(RIO *io, const char *pathname, int perm, int mode)
@@ -163,8 +193,12 @@ RadareWorker::RadareWorker(RCore *core, QObject *parent) :
 {
 }
 
-void RadareWorker::handleExecuteRequest(QString command, int requestId)
+void RadareWorker::handleInitializeRequest(QString platformName, QString archName, int pointerSize)
 {
+    Q_UNUSED(platformName);
+
+    RConfig *config = m_core->config;
+
     if (m_state == State::Created) {
         r_core_task_sync_begin(&m_core->tasks);
 
@@ -174,7 +208,6 @@ void RadareWorker::handleExecuteRequest(QString command, int requestId)
         r_core_cmd0(m_core, "=!");
         r_core_bin_load(m_core, uri, loadAddress);
 
-        RConfig *config = m_core->config;
         r_config_set(config, "scr.html", "true");
         r_config_set_i(config, "scr.color", COLOR_MODE_16M);
         r_config_set(config, "asm.emu", "true");
@@ -183,6 +216,15 @@ void RadareWorker::handleExecuteRequest(QString command, int requestId)
         m_state = State::Initialized;
     }
 
+    QByteArray radareOSName = platformName.toUtf8();
+    r_config_set(config, "asm.os", radareOSName.data());
+    QByteArray radareArchName = archFromFrida(archName).toUtf8();
+    r_config_set(config, "asm.arch", radareArchName.data());
+    r_config_set_i(config, "asm.bits", pointerSize * 8);
+}
+
+void RadareWorker::handleExecuteRequest(QString command, int requestId)
+{
     auto commandStr = command.toUtf8();
     char *resultStr = r_core_cmd_str(m_core, commandStr.data());
     QString result;
@@ -191,4 +233,15 @@ void RadareWorker::handleExecuteRequest(QString command, int requestId)
         ::free(resultStr);
     }
     emit executeResponse(result, requestId);
+}
+
+static QString archFromFrida(QString name)
+{
+    if (name == "ia32" || name == "x64")
+        return "x86";
+
+    if (name == "arm64")
+        return "arm";
+
+    return name;
 }

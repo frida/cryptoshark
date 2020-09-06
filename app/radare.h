@@ -1,8 +1,9 @@
 #ifndef RADARE_H
 #define RADARE_H
 
-#include <r_core.h>
+#include "models.h"
 
+#include <r_core.h>
 #include <QThread>
 #include <QWaitCondition>
 
@@ -19,11 +20,17 @@ public:
 
     static RadareController *instance();
 
+    Q_INVOKABLE void initialize(QString platformName, QString archName, int pointerSize);
     Q_INVOKABLE int execute(QString command);
 
 signals:
+    void initializeRequest(QString platformName, QString archName, int pointerSize);
     void executeRequest(QString command, int requestId);
-    void executeResponse(QString response);
+    void executeResponse(QString response, int requestId);
+
+private slots:
+    void onModulesChanged(Modules *newModules);
+    void onModuleSynchronized(Module *module);
 
 private:
     static RIODesc *onOpenWrapper(RIO *io, const char *pathname, int perm, int mode);
@@ -60,6 +67,7 @@ public:
     explicit RadareWorker(RCore *core, QObject *parent = nullptr);
 
 public slots:
+    void handleInitializeRequest(QString platformName, QString archName, int pointerSize);
     void handleExecuteRequest(QString command, int requestId);
 
 signals:
