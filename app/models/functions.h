@@ -46,6 +46,8 @@ public:
     }
 
 signals:
+    void discovered(QString name, int offset, Module *module);
+    void renamed(Function *function);
     void logMessage(Function *function, QString message);
 
 private:

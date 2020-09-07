@@ -33,7 +33,9 @@ RadareController::RadareController(QObject *parent) :
     connect(m_worker, &RadareWorker::executeResponse, this, &RadareController::executeResponse);
     m_thread.start();
 
-    connect(Models::instance(), &Models::modulesChanged, this, &RadareController::onModulesChanged);
+    auto models = Models::instance();
+    connect(models, &Models::modulesChanged, this, &RadareController::onModulesChanged);
+    connect(models, &Models::functionsChanged, this, &RadareController::onFunctionsChanged);
 }
 
 RadareController::~RadareController()
@@ -82,6 +84,28 @@ void RadareController::onModuleSynchronized(Module *module)
     if (commands.empty())
         return;
     execute(commands.join(';'));
+}
+
+void RadareController::onFunctionsChanged(Functions *newFunctions)
+{
+    if (newFunctions == nullptr)
+        return;
+
+    connect(newFunctions, &Functions::discovered, this, &RadareController::onFunctionDiscovered);
+    connect(newFunctions, &Functions::renamed, this, &RadareController::onFunctionRenamed);
+}
+
+void RadareController::onFunctionDiscovered(QString name, int offset, Module *module)
+{
+    const quint64 address = module->base() + offset;
+    // TODO: Use API instead, which is faster and means we don't have to quote the name – a detail ignored here.
+    execute(QStringLiteral("af+ 0x") + QString::number(address, 16) + QStringLiteral(" ") + name);
+}
+
+void RadareController::onFunctionRenamed(Function *function)
+{
+    // TODO: Use API instead, which is faster and means we don't have to quote the name – a detail ignored here.
+    execute(QStringLiteral("afn ") + function->name() + " " + function->address());
 }
 
 RIODesc *RadareController::onOpenWrapper(RIO *io, const char *pathname, int perm, int mode)

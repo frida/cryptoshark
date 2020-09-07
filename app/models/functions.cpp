@@ -97,6 +97,7 @@ bool Functions::updateName(int functionId, QString name)
 
         function->m_name = name;
         emit function->nameChanged(name);
+        emit renamed(function);
 
         notifyRowChange(function);
     }
@@ -254,6 +255,7 @@ void Functions::addCalls(QJsonObject summary)
                     m_insert.exec();
                     auto id = m_insert.lastInsertId().toInt();
                     m_insert.finish();
+                    emit discovered(name, offset, module);
 
                     function = getById(id);
                 }
@@ -401,8 +403,9 @@ void Functions::importModuleExports(QList<int> moduleIds)
         m_importedModules += moduleId;
 
         if (importNeeded) {
+            auto module = modules->getById(moduleId);
             auto request = router->request(QStringLiteral("module:get-functions"), {
-                                               modules->getById(moduleId)->name()
+                                               module->name()
                                            });
             QObject::connect(request, &Request::completed, [=] (QVariant result, RequestError *error) {
                 if (error != nullptr) {
@@ -438,6 +441,7 @@ void Functions::importModuleExports(QList<int> moduleIds)
 
                         function->m_name = newName;
                         emit function->nameChanged(newName);
+                        emit renamed(function);
 
                         function->m_exported = true;
                         emit function->exportedChanged(true);
@@ -458,6 +462,7 @@ void Functions::importModuleExports(QList<int> moduleIds)
                             m_insert.addBindValue(exported);
                         }
                         m_insert.finish();
+                        emit discovered(name, offset, module);
                     }
                     m_getBySymbol.finish();
                 }

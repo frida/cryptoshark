@@ -31,6 +31,9 @@ signals:
 private slots:
     void onModulesChanged(Modules *newModules);
     void onModuleSynchronized(Module *module);
+    void onFunctionsChanged(Functions *newFunctions);
+    void onFunctionDiscovered(QString name, int offset, Module *module);
+    void onFunctionRenamed(Function *function);
 
 private:
     static RIODesc *onOpenWrapper(RIO *io, const char *pathname, int perm, int mode);
