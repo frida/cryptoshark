@@ -31,18 +31,29 @@ SplitView {
     }
 
     onCurrentFunctionChanged: {
-        if (_scriptInstance === null)
-            return;
+        _refreshDisassembly();
+    }
+
+    Connections {
+        target: models.functions
+
+        function onRenamed(func) {
+            Qt.callLater(_refreshDisassembly);
+        }
+    }
+
+    function _refreshDisassembly() {
+        disassembly.text = "";
 
         const func = currentFunction;
-        if (func) {
-            disassembly.text = "";
-            disassembly.loading = true;
-            agentService.disassemble(func, text => {
-                disassembly.text = text;
-                disassembly.loading = false;
-            });
-        }
+        if (func === null)
+            return;
+
+        disassembly.loading = true;
+        agentService.disassemble(func, text => {
+            disassembly.text = text;
+            disassembly.loading = false;
+        });
     }
 
     orientation: Qt.Horizontal
@@ -331,18 +342,6 @@ SplitView {
                         property int _bufferLength: 1000
                         property var _lineLengths: []
 
-                        Component.onCompleted: {
-                            models.functions.logMessage.connect(_onLogMessage);
-                            functionDialog.rename.connect(_onRename);
-                        }
-
-                        Component.onDestruction: {
-                            functionDialog.rename.disconnect(_onRename);
-                            const functions = models.functions;
-                            if (functions !== null)
-                                functions.logMessage.disconnect(_onLogMessage);
-                        }
-
                         function appendMessage(message) {
                             message.split("<br />").forEach(line => {
                                 const lengthBefore = length;
@@ -359,19 +358,6 @@ SplitView {
                             log.cursorPosition = length;
                         }
 
-                        function _onLogMessage(func, message) {
-                            appendMessage("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
-                        }
-
-                        function _onRename(func, oldName, newName) {
-                            text = text.replace(new RegExp("(<a href=\"" + func.id + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
-                        }
-
-                        onLinkActivated: {
-                            functionDialog.functionId = parseInt(link, 10);
-                            functionDialog.open();
-                        }
-
                         background: Rectangle {
                             color: "black"
                         }
@@ -382,6 +368,27 @@ SplitView {
                         readOnly: true
                         selectByKeyboard: true
                         selectByMouse: true
+
+                        Connections {
+                            target: models.functions
+
+                            function onLogMessage(func, message) {
+                                log.appendMessage("<font color=\"#ffffff\"><a href=\"" + func.id + "\">" + func.name + "</a>: </font><font color=\"#808080\">" + message + "</font>");
+                            }
+                        }
+
+                        Connections {
+                            target: functionDialog
+
+                            function onRename(func, oldName, newName) {
+                                log.text = log.text.replace(new RegExp("(<a href=\"" + func.id + "\">.*?)\\b" + oldName + "\\b(.*?<\\/a>)", "g"), "$1" + newName + "$2");
+                            }
+                        }
+
+                        onLinkActivated: {
+                            functionDialog.functionId = parseInt(link, 10);
+                            functionDialog.open();
+                        }
                     }
                 }
 

@@ -33,7 +33,7 @@ private slots:
     void onModuleSynchronized(Module *module);
     void onFunctionsChanged(Functions *newFunctions);
     void onFunctionDiscovered(QString name, int offset, Module *module);
-    void onFunctionRenamed(Function *function);
+    void onFunctionRenamed(Function *func);
 
 private:
     static RIODesc *onOpenWrapper(RIO *io, const char *pathname, int perm, int mode);
