@@ -23,13 +23,13 @@ Dialog {
         const oldName = _func.name;
         const newName = name.text.trim();
         if (newName !== oldName) {
-            let suffix = "";
-            let count = 2;
-            while (!models.functions.updateName(_func.id, newName + suffix)) {
-                suffix = "_" + count;
-                count++;
+            let candidate = newName;
+            let serial = 2;
+            while (!models.functions.updateName(_func.id, candidate)) {
+                candidate = newName + "_" + serial;
+                serial++;
             }
-            rename(_func, oldName, newName);
+            rename(_func, oldName, candidate);
         }
 
         models.functions.updateProbe(_func.id, script.text);
