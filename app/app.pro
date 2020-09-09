@@ -73,10 +73,10 @@ cryptoshark_static_qt {
 
 INCLUDEPATH += \
     $$OUT_PWD \
-    $${RADARE_PREFIX}/include/libr \
-    $${RADARE_PREFIX}/include/libr/sdb
+    $${R2_PREFIX}/include/libr \
+    $${R2_PREFIX}/include/libr/sdb
 LIBS_PRIVATE += \
-    -L$${RADARE_PREFIX}/lib
+    -L$${R2_PREFIX}/lib
 r2_libs = \
     anal \
     asm \

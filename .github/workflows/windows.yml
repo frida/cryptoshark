@@ -17,43 +17,53 @@ jobs:
     - name: Install Meson
       run: pip install meson ninja
 
-#    - name: Install 7-Zip PowerShell Module
-#      run: Install-Module 7Zip4PowerShell -Force -Verbose
-#      shell: powershell
+    - name: Install 7-Zip PowerShell Module
+      run: Install-Module 7Zip4PowerShell -Force -Verbose
+      shell: powershell
 
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Bootstrap Cryptoshark
-      run: bootstrap
+    - name: Resolve Paths
+      id: resolve-paths
+      run: |
+        echo ::set-output name=r2_prefix::%cd%\ext\radare2\build\priv_install_dir
+        cd ..
+        echo ::set-output name=qt_prefix::%cd%\dist
       shell: cmd
 
-#    - name: Resolve Qt Prefix
-#      id: resolve-qt-prefix
-#      run: |
-#        cd ..
-#        echo Setting path=%cd%\dist
-#        echo ::set-output name=path::%cd%\dist
-#      shell: cmd
-#
-#    - name: Cache Qt
-#      id: cache-qt
-#      uses: actions/cache@v2
-#      with:
-#        path: ${{ steps.resolve-qt-prefix.outputs.path }}
-#        key: qt5-windows-x86_64
-#
-#    - name: Build Qt
-#      if: steps.cache-qt.outputs.cache-hit != 'true'
-#      run: |
-#        rmdir /s /q "%Programfiles%\dotnet"
-#        rmdir /s /q "%Programfiles%\Unity"
-#        call tools\windows\activate-env x86_64
-#        call get-qt
-#        call build-qt C:\build-qt
-#      shell: cmd
+    - name: Cache R2
+      id: cache-r2
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.resolve-paths.outputs.r2_prefix }}
+        key: r2-windows-x86_64
+
+    - name: Build R2
+      if: steps.cache-r2.outputs.cache-hit != 'true'
+      run: |
+        call tools\windows\activate-env x86_64
+        call build-r2
+      shell: cmd
+
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.resolve-paths.outputs.qt_prefix }}
+        key: qt5-windows-x86_64
+
+    - name: Build Qt
+      if: steps.cache-qt.outputs.cache-hit != 'true'
+      run: |
+        rmdir /s /q "%Programfiles%\dotnet"
+        rmdir /s /q "%Programfiles%\Unity"
+        call tools\windows\activate-env x86_64
+        call get-qt
+        call build-qt C:\build-qt
+      shell: cmd
 #
 #    - name: Build Cryptoshark
 #      run: build

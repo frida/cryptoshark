@@ -21,7 +21,7 @@ pushd %~dp0
 if not exist ext\frida-qml\frida-qml.pri (
   echo.
   echo ***
-  echo *** Fetching frida-qml
+  echo *** Fetching submodules
   echo ***
   git submodule init
   git submodule update || exit /b
@@ -49,24 +49,7 @@ if not exist ext\radare2\build\priv_install_dir\lib\libr_core.a (
   echo ***
   echo *** Building r2
   echo ***
-  pushd ext\radare2
-  rmdir /s /q build 2>nul
-  meson setup build ^
-      --prefix="!CD!\build\priv_install_dir" ^
-      --backend=ninja ^
-      --default-library=static ^
-      -Doptimization=s ^
-      -Db_ndebug=true ^
-      -Dcli=disabled ^
-      -Duse_capstone_version=v5 ^
-      -Duse_libuv=false ^
-      -Duse_sys_magic=false ^
-      -Ddebugger=false ^
-      -Denable_tests=false ^
-      -Denable_r2r=false ^
-      || exit /b
-  ninja -C build install || exit /b
-  popd
+  call tools\windows\build-r2.bat
 )
 
 if not exist app\agent.js (
