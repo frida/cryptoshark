@@ -4,6 +4,7 @@
 #include "models.h"
 
 #include <r_core.h>
+#include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
 

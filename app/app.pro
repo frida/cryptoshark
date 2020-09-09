@@ -76,29 +76,40 @@ INCLUDEPATH += \
     $${RADARE_PREFIX}/include/libr \
     $${RADARE_PREFIX}/include/libr/sdb
 LIBS_PRIVATE += \
-    -L$${RADARE_PREFIX}/lib \
-    -lr_anal \
-    -lr_asm \
-    -lr_bin \
-    -lr_bp \
-    -lr_config \
-    -lr_cons \
-    -lr_core \
-    -lr_crypto \
-    -lr_debug \
-    -lr_egg \
-    -lr_flag \
-    -lr_fs \
-    -lr_hash \
-    -lr_io \
-    -lr_lang \
-    -lr_magic \
-    -lr_parse \
-    -lr_reg \
-    -lr_search \
-    -lr_socket \
-    -lr_syscall \
-    -lr_util
+    -L$${RADARE_PREFIX}/lib
+r2_libs = \
+    anal \
+    asm \
+    bin \
+    bp \
+    config \
+    cons \
+    core \
+    crypto \
+    debug \
+    egg \
+    flag \
+    fs \
+    hash \
+    io \
+    lang \
+    magic \
+    parse \
+    reg \
+    search \
+    socket \
+    syscall \
+    util
+win32 {
+    for (name, r2_libs) {
+        eval(LIBS_PRIVATE += libr_$${name}.a)
+    }
+    LIBS_PRIVATE += advapi32.lib wininet.lib ws2_32.lib
+} else {
+    for (name, r2_libs) {
+        eval(LIBS_PRIVATE += -lr_$$name)
+    }
+}
 
 unix {
     INSTALLS += target

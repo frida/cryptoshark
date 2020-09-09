@@ -44,7 +44,7 @@ if not exist !__CS_DEVKITDIR!\frida-core.lib (
   popd
 )
 
-if not exist ext\radare2\build\priv_install_dir\lib\libr_core.lib (
+if not exist ext\radare2\build\priv_install_dir\lib\libr_core.a (
   echo.
   echo ***
   echo *** Building r2
@@ -58,7 +58,7 @@ if not exist ext\radare2\build\priv_install_dir\lib\libr_core.lib (
       -Doptimization=s ^
       -Db_ndebug=true ^
       -Dcli=disabled ^
-      -Duse_capstone5=true ^
+      -Duse_capstone_version=v5 ^
       -Duse_libuv=false ^
       -Duse_sys_magic=false ^
       -Ddebugger=false ^
