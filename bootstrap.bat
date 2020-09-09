@@ -15,6 +15,15 @@ if "!__CS_ARCH!" == "" (
 
 pushd %~dp0
 
+if not exist ext\frida-qml\frida-qml.pri (
+  echo.
+  echo ***
+  echo *** Fetching frida-qml
+  echo ***
+  git submodule init
+  git submodule update || exit /b
+)
+
 set __CS_DEVKITURL=https://github.com/frida/frida/releases/download/!__CS_FRIDA_VERSION!/frida-core-devkit-!__CS_FRIDA_VERSION!-windows-!__CS_ARCH!.exe
 set __CS_DEVKITDIR=ext\frida-core\!__CS_ARCH!
 if not exist !__CS_DEVKITDIR!\frida-core.lib (
@@ -32,13 +41,28 @@ if not exist !__CS_DEVKITDIR!\frida-core.lib (
   popd
 )
 
-if not exist ext\frida-qml\frida-qml.pri (
+if not exist ext\radare2\build\priv_install_dir\lib\r_core.lib (
   echo.
   echo ***
-  echo *** Fetching frida-qml
+  echo *** Building r2
   echo ***
-  git submodule init
-  git submodule update || exit /b
+  pushd ext\radare2
+  rmdir /s /q build 2>nul
+  meson setup build ^
+      --prefix="$(pwd)/build/priv_install_dir" ^
+      --backend=ninja ^
+      --default-library=static ^
+      -Doptimization=s ^
+      -Db_ndebug=true ^
+      -Duse_capstone5=true ^
+      -Duse_libuv=false ^
+      -Duse_sys_magic=false ^
+      -Ddebugger=false ^
+      -Denable_tests=false ^
+      -Denable_r2r=false ^
+      || exit /b
+  ninja -C build install || exit /b
+  popd
 )
 
 if not exist app\agent.js (
