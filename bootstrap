@@ -45,6 +45,7 @@ if [ ! -f ext/radare2/build/priv_install_dir/lib/libr_core.a ]; then
       --default-library=static \
       -Doptimization=s \
       -Db_ndebug=true \
+      -Dcli=disabled \
       -Duse_capstone5=true \
       -Duse_libuv=false \
       -Duse_sys_magic=false \

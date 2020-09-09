@@ -12,6 +12,9 @@ if "!__CS_ARCH!" == "" (
     set __CS_ARCH=x86_64
   )
 )
+if not defined CRYPTOSHARK_ARCH (
+  call %~dp0tools\windows\activate-env.bat !__CS_ARCH! || exit /b
+)
 
 pushd %~dp0
 
@@ -41,7 +44,7 @@ if not exist !__CS_DEVKITDIR!\frida-core.lib (
   popd
 )
 
-if not exist ext\radare2\build\priv_install_dir\lib\r_core.lib (
+if not exist ext\radare2\build\priv_install_dir\lib\libr_core.lib (
   echo.
   echo ***
   echo *** Building r2
@@ -49,11 +52,12 @@ if not exist ext\radare2\build\priv_install_dir\lib\r_core.lib (
   pushd ext\radare2
   rmdir /s /q build 2>nul
   meson setup build ^
-      --prefix="$(pwd)/build/priv_install_dir" ^
+      --prefix="!CD!\build\priv_install_dir" ^
       --backend=ninja ^
       --default-library=static ^
       -Doptimization=s ^
       -Db_ndebug=true ^
+      -Dcli=disabled ^
       -Duse_capstone5=true ^
       -Duse_libuv=false ^
       -Duse_sys_magic=false ^
