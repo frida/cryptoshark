@@ -16,12 +16,6 @@ ApplicationWindow {
     property var _endReason: null
     property var _models: null
 
-    /*
-    Component.onCompleted: {
-        attach(Frida.localSystem, { name: "hello", pid: 78498 });
-    }
-    */
-
     function spawn(device, program, options) {
         _endReason = null;
 
