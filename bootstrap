@@ -1,6 +1,6 @@
 #!/bin/bash
 
-frida_version=12.11.12
+frida_version=12.11.14
 
 cd "$(dirname $0)"
 
