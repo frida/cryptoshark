@@ -27,9 +27,9 @@
     "watch": "frida-compile index.ts -o ../agent.js -xXw"
   },
   "devDependencies": {
-    "@types/frida-gum": "^16.1.0",
-    "@types/node": "^14.0.24",
-    "frida-compile": "^9.3.0"
+    "@types/frida-gum": "^16.2.0",
+    "@types/node": "^14.11.1",
+    "frida-compile": "^9.5.2"
   },
   "engines": {
     "node": ">=10.0.0"
