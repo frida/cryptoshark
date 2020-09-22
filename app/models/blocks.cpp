@@ -94,6 +94,28 @@ bool Blocks::updateName(int blockId, QString name)
     return success;
 }
 
+QJsonObject Blocks::resolve(QJsonArray addresses, Module *module)
+{
+    QJsonObject result;
+
+    auto moduleId = module->id();
+    auto base = module->base();
+    foreach (auto addressValue, addresses) {
+        auto address = addressValue.toString().toULongLong();
+        int offset = address - base;
+
+        m_getByLocation.addBindValue(moduleId);
+        m_getByLocation.addBindValue(offset);
+        m_getByLocation.exec();
+        QString status = m_getByLocation.next() ? "executed" : "pending";
+        m_getByLocation.finish();
+
+        result[QStringLiteral("0x") + QString::number(address, 16)] = status;
+    }
+
+    return result;
+}
+
 void Blocks::symbolicate()
 {
     auto router = Router::instance();

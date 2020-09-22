@@ -198,12 +198,62 @@ ApplicationWindow {
 
         function disassemble(func, callback) {
             executeRadareCommand([
-                "s 0x" + func.address.toString(16),
+                "s 0x" + func.address,
                 "af-",
                 "af",
                 "afn base64:" + Qt.btoa(func.name),
                 "pdf",
-            ].join("; "), callback);
+                "afbj"
+            ].join("; "), result => {
+                                     const lineBreak = "<br />";
+                                     const lastBrOffset = result.lastIndexOf(lineBreak);
+                                     const disasm = result.substr(0, lastBrOffset);
+                                     const blocks = result.substr(lastBrOffset + 6);
+
+                                     // XXX: We cannot JSON.parse() here as memory addresses are represented by numbers,
+                                     //      which means we may lose bits.
+                                     const blockStarts = blocks.match(/"addr":\d+/g).map(match => match.split(":")[1]);
+                                     const blockMap = _models.blocks.resolve(blockStarts, func.module);
+
+                                     let current = {
+                                         status: "none",
+                                         lines: []
+                                     };
+                                     const items = [current];
+
+                                     for (const line of disasm.split(lineBreak)) {
+                                         const m = line.match(/(0x[0-9a-f]{4,})/);
+                                         if (m !== null) {
+                                             const address = m[1];
+                                             const status = blockMap[address];
+                                             if (status !== undefined) {
+                                                 current = {
+                                                     status,
+                                                     lines: []
+                                                 };
+                                                 items.push(current);
+                                             }
+                                         }
+
+                                         current.lines.push(line);
+                                     }
+
+                                     const styles = {
+                                         none: "",
+                                         pending: ` style="background-color: #f2a4a2"`,
+                                         executed: ` style="background-color: #cdfdc6"`,
+                                     };
+
+                                     const html = items.map(({ status, lines }, index) => {
+                                                                const marker = `<span${styles[status]}>&nbsp;</span>`;
+                                                                return ((index > 0) ? lineBreak : "") + lines.map(l => {
+                                                                                                                      const startIndex = l.indexOf("&nbsp;");
+                                                                                                                      return marker + l.substr(startIndex);
+                                                                                                                  }).join(lineBreak);
+                                                            }).join("\n");
+
+                                     callback(html);
+                                 });
         }
 
         function executeRadareCommand(command, callback) {

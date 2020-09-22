@@ -1,7 +1,10 @@
 #ifndef BLOCKS_H
 #define BLOCKS_H
 
+#include "modules.h"
+
 #include <QHash>
+#include <QJsonObject>
 #include <QSqlQuery>
 #include <QSqlQueryModel>
 
@@ -17,6 +20,7 @@ public:
     void addCoverage(QJsonArray blocks);
     bool updateName(int blockId, QString name);
 
+    Q_INVOKABLE QJsonObject resolve(QJsonArray addresses, Module *module);
     Q_INVOKABLE void symbolicate();
 
 private:
