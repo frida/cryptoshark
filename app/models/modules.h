@@ -18,8 +18,9 @@ public:
                      QSqlDatabase db = QSqlDatabase());
 
     Q_INVOKABLE Module *getById(int id);
+    Q_INVOKABLE Module *getByRemoteId(int id);
     Q_INVOKABLE Module *getByName(QString name);
-    void update(QJsonArray modules);
+    void update(QJsonObject deltas);
     void addCalls(QHash<int, int> calls);
 
     QHash<int, QByteArray> roleNames() const override { return m_roleNames; }
@@ -40,7 +41,9 @@ private:
 
     QList<Module *> m_modules;
     QHash<int, Module *> m_moduleById;
+    QHash<int, Module *> m_moduleByRemoteId;
     QHash<QString, Module *> m_moduleByName;
+    QHash<QString, Module *> m_moduleByPath;
     QHash<int, QByteArray> m_roleNames;
     QSqlDatabase m_database;
     QSqlQuery m_insert;

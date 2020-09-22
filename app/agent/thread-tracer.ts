@@ -1,4 +1,5 @@
 import { Service } from "./interfaces";
+import { ModuleMonitor, ModuleLocation } from "./module-monitor";
 
 export class ThreadTracer implements Service {
     handlers = {
@@ -11,43 +12,25 @@ export class ThreadTracer implements Service {
 
     private probes = new Map<FunctionAddress, Probe>();
 
-    constructor(private moduleMap: ModuleMap) {
+    constructor(private moduleMonitor: ModuleMonitor) {
     }
 
     follow(threadId: ThreadId) {
-        const moduleMap = this.moduleMap;
+        const { moduleMonitor } = this;
 
         Stalker.follow(threadId, {
             events: {
                 call: true
             },
             onCallSummary(summary) {
-                const enrichedSummary: ThreadSummary = {};
-                for (const [rawAddress, count] of Object.entries(summary)) {
-                    const address = ptr(rawAddress);
-
-                    let symbol: ModuleSymbol | null = null;
-                    const m = moduleMap.find(address);
-                    if (m !== null) {
-                        symbol = {
-                            module: m.name,
-                            offset: address.sub(m.base).toInt32()
-                        };
-                    }
-
-                    enrichedSummary[rawAddress] = {
-                        symbol,
-                        count
-                    };
-                }
-
+                moduleMonitor.synchronize();
                 send({
                     name: "thread:summary",
                     payload: {
                         thread: {
                             id: threadId
                         },
-                        summary: enrichedSummary
+                        summary: Object.entries(summary).map(([rawAddress, count]) => [moduleMonitor.resolve(ptr(rawAddress)), count])
                     }
                 });
             }

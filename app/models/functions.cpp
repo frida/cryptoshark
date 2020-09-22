@@ -215,7 +215,7 @@ void Functions::symbolicate(int moduleId)
     });
 }
 
-void Functions::addCalls(QJsonObject summary)
+void Functions::addCalls(QJsonArray summary)
 {
     auto modules = Models::instance()->modules();
     QHash<int, int> moduleCalls;
@@ -223,74 +223,75 @@ void Functions::addCalls(QJsonObject summary)
     m_database.transaction();
 
     bool sortNeeded = false;
-    auto i = summary.constBegin();
-    auto e = summary.constEnd();
     QModelIndex noParent;
-    for (; i != e; ++i) {
-        auto entry = i.value().toObject();
-        auto symbolValue = entry[QStringLiteral("symbol")];
-        if (!symbolValue.isNull()) {
-            auto symbol = symbolValue.toObject();
-            auto moduleName = symbol[QStringLiteral("module")].toString();
-            auto offset = symbol[QStringLiteral("offset")].toInt();
-            auto count = entry[QStringLiteral("count")].toInt();
+    foreach (QJsonValue entryValue, summary) {
+        auto entry = entryValue.toArray();
 
-            auto symbolKey = moduleName + offset;
-            auto function = m_functionBySymbol[symbolKey];
-            if (function == nullptr) {
-                Module *module = modules->getByName(moduleName);
-                auto moduleId = module->id();
-                m_getBySymbol.addBindValue(moduleId);
-                m_getBySymbol.addBindValue(offset);
-                m_getBySymbol.exec();
-                if (m_getBySymbol.next()) {
-                    function = getById(m_getBySymbol.value(0).toInt());
-                } else {
-                    auto name = functionName(module, offset);
-                    bool exported = false;
-                    m_insert.addBindValue(name);
-                    m_insert.addBindValue(moduleId);
-                    m_insert.addBindValue(offset);
-                    m_insert.addBindValue(exported);
-                    m_insert.exec();
-                    auto id = m_insert.lastInsertId().toInt();
-                    m_insert.finish();
-                    emit discovered(name, offset, module);
+        auto targetValue = entry[0];
+        if (!targetValue.isArray())
+            continue; // TODO: Handle calls to dynamically generated code.
 
-                    function = getById(id);
-                }
-                m_getBySymbol.finish();
+        auto target = targetValue.toArray();
+        auto remoteModuleId = target[0].toInt();
+        auto offset = target[1].toInt();
 
-                m_functionBySymbol[symbolKey] = function;
+        auto count = entry[1].toInt();
+
+        auto symbolKey = QString::number(remoteModuleId) + "|" + offset;
+        auto function = m_functionBySymbol[symbolKey];
+        if (function == nullptr) {
+            Module *module = modules->getByRemoteId(remoteModuleId);
+            auto moduleId = module->id();
+            m_getBySymbol.addBindValue(moduleId);
+            m_getBySymbol.addBindValue(offset);
+            m_getBySymbol.exec();
+            if (m_getBySymbol.next()) {
+                function = getById(m_getBySymbol.value(0).toInt());
+            } else {
+                auto name = functionName(module, offset);
+                bool exported = false;
+                m_insert.addBindValue(name);
+                m_insert.addBindValue(moduleId);
+                m_insert.addBindValue(offset);
+                m_insert.addBindValue(exported);
+                m_insert.exec();
+                auto id = m_insert.lastInsertId().toInt();
+                m_insert.finish();
+                emit discovered(name, offset, module);
+
+                function = getById(id);
             }
+            m_getBySymbol.finish();
 
-            auto calls = function->m_calls + count;
-
-            m_updateCalls.addBindValue(calls);
-            m_updateCalls.addBindValue(function->m_id);
-            m_updateCalls.exec();
-            m_updateCalls.finish();
-
-            function->m_calls = calls;
-            emit function->callsChanged(calls);
-
-            if (function->module()->id() == m_currentModuleId) {
-                auto row = m_functions.indexOf(function);
-                if (row != -1) {
-                    auto i = index(row, 2);
-                    emit dataChanged(i, i);
-                } else {
-                    row = m_functions.size();
-                    beginInsertRows(noParent, row, row);
-                    m_functions.append(function);
-                    endInsertRows();
-                }
-
-                sortNeeded = true;
-            }
-
-            moduleCalls[function->module()->id()] += count;
+            m_functionBySymbol[symbolKey] = function;
         }
+
+        auto calls = function->m_calls + count;
+
+        m_updateCalls.addBindValue(calls);
+        m_updateCalls.addBindValue(function->m_id);
+        m_updateCalls.exec();
+        m_updateCalls.finish();
+
+        function->m_calls = calls;
+        emit function->callsChanged(calls);
+
+        if (function->module()->id() == m_currentModuleId) {
+            auto row = m_functions.indexOf(function);
+            if (row != -1) {
+                auto i = index(row, 2);
+                emit dataChanged(i, i);
+            } else {
+                row = m_functions.size();
+                beginInsertRows(noParent, row, row);
+                m_functions.append(function);
+                endInsertRows();
+            }
+
+            sortNeeded = true;
+        }
+
+        moduleCalls[function->module()->id()] += count;
     }
 
     if (sortNeeded)

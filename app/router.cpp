@@ -81,11 +81,11 @@ bool Router::tryHandleStanza(QJsonObject stanza)
     auto name = stanza[QStringLiteral("name")];
 
     if (name == QStringLiteral("modules:update")) {
-        Models::instance()->modules()->update(stanza[QStringLiteral("payload")].toArray());
+        Models::instance()->modules()->update(stanza[QStringLiteral("payload")].toObject());
         return true;
     } else if (name == QStringLiteral("thread:summary")) {
-        auto update = stanza[QStringLiteral("payload")].toObject();
-        auto summary = update[QStringLiteral("summary")].toObject();
+        auto payload = stanza[QStringLiteral("payload")].toObject();
+        auto summary = payload[QStringLiteral("summary")].toArray();
         Models::instance()->functions()->addCalls(summary);
         return true;
     } else if (name == QStringLiteral("function:log")) {

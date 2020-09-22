@@ -33,6 +33,7 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
             m_modules.append(module);
         m_moduleById[id] = module;
         m_moduleByName[name] = module;
+        m_moduleByPath[path] = module;
     }
 
     m_roleNames[Qt::DisplayRole] = QStringLiteral("display").toUtf8();
@@ -40,7 +41,7 @@ Modules::Modules(QObject *parent, QSqlDatabase db) :
 
     m_insert.prepare(QStringLiteral("INSERT INTO modules (name, path, base, main) VALUES (?, ?, ?, ?)"));
     m_insert.setForwardOnly(true);
-    m_update.prepare(QStringLiteral("UPDATE modules SET path = ?, base = ? WHERE id = ?"));
+    m_update.prepare(QStringLiteral("UPDATE modules SET base = ? WHERE id = ?"));
     m_update.setForwardOnly(true);
     m_addCalls.prepare(QStringLiteral("UPDATE modules SET calls = calls + ? WHERE id = ?"));
     m_addCalls.setForwardOnly(true);
@@ -53,32 +54,35 @@ Module *Modules::getById(int id)
     return m_moduleById[id];
 }
 
+Module *Modules::getByRemoteId(int id)
+{
+    return m_moduleByRemoteId[id];
+}
+
 Module *Modules::getByName(QString name)
 {
     return m_moduleByName[name];
 }
 
-void Modules::update(QJsonArray modules)
+void Modules::update(QJsonObject deltas)
 {
     m_database.transaction();
 
-    foreach (QJsonValue value, modules) {
+    foreach (QJsonValue value, deltas[QStringLiteral("add")].toArray()) {
         auto data = value.toObject();
+        auto remoteId = data[QStringLiteral("id")].toInt();
         auto name = data[QStringLiteral("name")].toString();
         auto path = data[QStringLiteral("path")].toString();
         auto base = data[QStringLiteral("base")].toString().toULongLong(nullptr, 16);
         auto main = data[QStringLiteral("main")].toBool();
 
-        auto module = m_moduleByName[name];
+        auto module = m_moduleByPath[path];
         if (module != nullptr) {
-            m_update.addBindValue(path);
             m_update.addBindValue(base);
             m_update.addBindValue(module->id());
             m_update.exec();
             m_update.finish();
 
-            module->m_path = path;
-            emit module->pathChanged(path);
             module->m_base = base;
             emit module->baseChanged(base);
         } else {
@@ -93,7 +97,9 @@ void Modules::update(QJsonArray modules)
             module = new Module(this, id, name, path, base, main, 0);
             m_moduleById[id] = module;
             m_moduleByName[name] = module;
+            m_moduleByPath[path] = module;
         }
+        m_moduleByRemoteId[remoteId] = module;
 
         emit synchronized(module);
     }

@@ -32,7 +32,7 @@ public:
 
     Q_INVOKABLE void symbolicate(int moduleId);
 
-    void addCalls(QJsonObject summary);
+    void addCalls(QJsonArray summary);
     void addLogMessage(int functionId, QString message);
 
     QHash<int, QByteArray> roleNames() const override { return m_roleNames; }
@@ -40,7 +40,7 @@ public:
     int columnCount(const QModelIndex &) const override { return 3; }
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
     Q_INVOKABLE QVariant data(const QModelIndex &index, QString roleName) const;
-    Q_INVOKABLE QVariant data(const QModelIndex &index, int role) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
     Qt::ItemFlags flags(const QModelIndex &) const override {
         return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren;
     }
