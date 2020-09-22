@@ -35,6 +35,16 @@ SplitView {
         _refreshDisassembly();
     }
 
+    onCurrentBlockIdChanged: {
+        const blockId = currentBlockId;
+        if (blockId === null)
+            return;
+        const func = models.blocks.findNearestFunction(blockId);
+        if (func === currentFunction)
+            return;
+        currentFunction = func;
+    }
+
     Connections {
         target: models.functions
 

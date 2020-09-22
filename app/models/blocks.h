@@ -1,12 +1,13 @@
 #ifndef BLOCKS_H
 #define BLOCKS_H
 
-#include "modules.h"
-
-#include <QHash>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QSqlQuery>
 #include <QSqlQueryModel>
+
+class Function;
+class Module;
 
 class Blocks : public QSqlQueryModel
 {
@@ -20,7 +21,8 @@ public:
     void addCoverage(QJsonArray blocks);
     bool updateName(int blockId, QString name);
 
-    Q_INVOKABLE QJsonObject resolve(QJsonArray addresses, Module *module);
+    Q_INVOKABLE Function *findNearestFunction(int blockId);
+    Q_INVOKABLE QJsonObject resolveBlockAddresses(QJsonArray addresses, Module *module);
     Q_INVOKABLE void symbolicate();
 
 private:
@@ -29,6 +31,7 @@ private:
     QSqlDatabase m_database;
     QSqlQuery m_getByLocation;
     QSqlQuery m_getUnnamed;
+    QSqlQuery m_getNearest;
     QSqlQuery m_insert;
     QSqlQuery m_updateName;
 };

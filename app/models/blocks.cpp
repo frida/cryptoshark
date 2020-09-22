@@ -25,6 +25,12 @@ Blocks::Blocks(QObject *parent, QSqlDatabase db) :
                                         "INNER JOIN modules ON modules.id = blocks.module "
                                         "WHERE blocks.name IS NULL"));
     m_getUnnamed.setForwardOnly(true);
+    m_getNearest.prepare(QStringLiteral("SELECT functions.id FROM blocks INNER JOIN functions "
+                                        "ON functions.module = blocks.module AND functions.offset <= blocks.offset "
+                                        "WHERE blocks.id = ? "
+                                        "ORDER BY functions.offset DESC "
+                                        "LIMIT 1"));
+    m_getNearest.setForwardOnly(true);
     m_insert.prepare(QStringLiteral("INSERT INTO blocks (module, offset, size) VALUES (?, ?, ?)"));
     m_insert.setForwardOnly(true);
     m_updateName.prepare(QStringLiteral("UPDATE blocks SET name = ? WHERE id = ?"));
@@ -101,7 +107,22 @@ bool Blocks::updateName(int blockId, QString name)
     return success;
 }
 
-QJsonObject Blocks::resolve(QJsonArray addresses, Module *module)
+Function *Blocks::findNearestFunction(int blockId)
+{
+    Function *result = nullptr;
+
+    m_getNearest.addBindValue(blockId);
+    m_getNearest.exec();
+    if (m_getNearest.next()) {
+        auto funcId = m_getNearest.value(0).toInt();
+        result = Models::instance()->functions()->getById(funcId);
+    }
+    m_getNearest.finish();
+
+    return result;
+}
+
+QJsonObject Blocks::resolveBlockAddresses(QJsonArray addresses, Module *module)
 {
     QJsonObject result;
 

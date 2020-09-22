@@ -214,7 +214,7 @@ ApplicationWindow {
                                      // XXX: We cannot JSON.parse() here as memory addresses are represented by numbers,
                                      //      which means we may lose bits.
                                      const blockStarts = blocks.match(/"addr":\d+/g).map(match => match.split(":")[1]);
-                                     const blockMap = _models.blocks.resolve(blockStarts, func.module);
+                                     const blockMap = _models.blocks.resolveBlockAddresses(blockStarts, func.module);
 
                                      let current = {
                                          status: "none",
