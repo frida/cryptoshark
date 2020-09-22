@@ -233,6 +233,7 @@ void RadareWorker::handleInitializeRequest(QString platformName, QString archNam
         r_core_bin_load(m_core, uri, loadAddress);
 
         r_config_set(config, "scr.html", "true");
+        r_config_set(config, "scr.utf8", "true");
         r_config_set_i(config, "scr.color", COLOR_MODE_16M);
         r_config_set(config, "asm.emu", "true");
         r_config_set(config, "emu.str", "true");
