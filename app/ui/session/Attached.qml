@@ -2,7 +2,7 @@ import Cryptoshark 1.0
 
 import QtQuick 2.12
 import QtQuick.Controls 2.13
-import QtQuick.Layouts 1.1
+import QtQuick.Layouts 1.3
 import Frida 1.0
 
 import "../components"
@@ -17,6 +17,7 @@ SplitView {
 
     property var currentModule: null
     property var currentFunction: null
+    property var currentBlockId: null
 
     property var endReason: ""
 
@@ -59,17 +60,27 @@ SplitView {
     orientation: Qt.Horizontal
 
     Item {
+        id: sidebar
+
         SplitView.preferredWidth: 250
         SplitView.minimumWidth: 50
 
         onWidthChanged: {
             threadsView.forceLayout();
+            relayoutCalls();
+            relayoutCoverage();
+        }
+
+        function relayoutCalls() {
             modulesView.forceLayout();
             functionsView.forceLayout();
         }
 
+        function relayoutCoverage() {
+            blocksView.forceLayout();
+        }
+
         ColumnLayout {
-            id: sidebar
             anchors.fill: parent
             spacing: 0
 
@@ -138,114 +149,192 @@ SplitView {
                 }
             }
 
-            Rectangle {
-                height: 150
+            TabBar {
+                id: bar
+
                 Layout.fillWidth: true
 
-                border {
-                    width: 1
-                    color:  "#666"
+                TabButton {
+                    text: qsTr("Calls")
                 }
-
-                color: "#ccc"
-
-                SimpleTableView {
-                    id: modulesView
-
-                    model: models.modules
-
-                    x: 1
-                    y: 1
-                    width: parent.width - 2
-                    height: parent.height - 2
-
-                    columnTitles: [qsTr("Name"), qsTr("Calls")]
-                    columnWidths: [-1, 80]
-
-                    onCurrentRowChanged: {
-                        const currentId = model.data(model.index(currentRow, 0), "id") || null;
-                        if (currentId !== null) {
-                            if (currentModule === null || currentModule.id !== currentId) {
-                                currentModule = model.getById(currentId);
-                            }
-                        } else if (currentModule !== null) {
-                            currentModule = null;
-                        }
-                    }
+                TabButton {
+                    text: qsTr("Coverage")
                 }
             }
-
-            Rectangle {
+            StackLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                border {
-                    width: 1
-                    color:  "#666"
+                currentIndex: bar.currentIndex
+
+                onCurrentIndexChanged: {
+                    if (currentIndex === 0)
+                        sidebar.relayoutCalls();
+                    else
+                        sidebar.relayoutCoverage();
                 }
 
-                color: "#ccc"
-
                 ColumnLayout {
-                    x: 1
-                    y: 1
-                    width: parent.width - 2
-                    height: parent.height - 2
+                    spacing: 0
 
-                    SimpleTableView {
-                        id: functionsView
+                    Rectangle {
+                        height: 150
+                        Layout.fillWidth: true
 
-                        model: models.functions
+                        border {
+                            width: 1
+                            color:  "#666"
+                        }
 
+                        color: "#ccc"
+
+                        SimpleTableView {
+                            id: modulesView
+
+                            model: models.modules
+
+                            x: 1
+                            y: 1
+                            width: parent.width - 2
+                            height: parent.height - 2
+
+                            columnTitles: [qsTr("Name"), qsTr("Calls")]
+                            columnWidths: [-1, 80]
+
+                            onCurrentRowChanged: {
+                                const currentId = model.data(model.index(currentRow, 0), "id") || null;
+                                if (currentId !== null) {
+                                    if (currentModule === null || currentModule.id !== currentId) {
+                                        currentModule = model.getById(currentId);
+                                    }
+                                } else if (currentModule !== null) {
+                                    currentModule = null;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
 
-                        columnTitles: ["", qsTr("Function"), qsTr("Calls")]
-                        columnWidths: [20, -1, 80]
-
-                        onCurrentRowChanged: {
-                            const currentId = model.data(model.index(currentRow, 0), "id") || null;
-                            if (currentId !== null) {
-                                if (currentFunction === null || currentFunction.id !== currentId) {
-                                    currentFunction = model.getById(currentId);
-                                }
-                            } else if (currentFunction !== null) {
-                                currentFunction = null;
-                            }
+                        border {
+                            width: 1
+                            color:  "#666"
                         }
 
-                        onActivated: {
-                            functionDialog.functionId = currentFunction.id;
-                            functionDialog.open();
+                        color: "#ccc"
+
+                        ColumnLayout {
+                            x: 1
+                            y: 1
+                            width: parent.width - 2
+                            height: parent.height - 2
+
+                            SimpleTableView {
+                                id: functionsView
+
+                                model: models.functions
+
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+
+                                columnTitles: ["", qsTr("Function"), qsTr("Calls")]
+                                columnWidths: [20, -1, 80]
+
+                                onCurrentRowChanged: {
+                                    const currentId = model.data(model.index(currentRow, 0), "id") || null;
+                                    if (currentId !== null) {
+                                        if (currentFunction === null || currentFunction.id !== currentId) {
+                                            currentFunction = model.getById(currentId);
+                                        }
+                                    } else if (currentFunction !== null) {
+                                        currentFunction = null;
+                                    }
+                                }
+
+                                onActivated: {
+                                    functionDialog.functionId = currentFunction.id;
+                                    functionDialog.open();
+                                }
+                            }
+                            RowLayout {
+                                visible: _scriptInstance !== null
+
+                                Layout.rightMargin: 5
+                                Layout.bottomMargin: 5
+                                Layout.leftMargin: 5
+
+                                Button {
+                                    Layout.fillWidth: true
+                                    Layout.maximumWidth: 150
+                                    property string _action: currentFunction !== null && currentFunction.probeActive ? "remove" : "add"
+                                    text: _action === "add" ? qsTr("Add Probe") : qsTr("Remove Probe")
+                                    enabled: currentFunction !== null
+
+                                    onClicked: {
+                                        if (_action === "add") {
+                                            models.functions.addProbe(currentFunction.id);
+                                        } else {
+                                            models.functions.removeProbe(currentFunction.id);
+                                        }
+                                    }
+                                }
+                                Button {
+                                    text: qsTr("Symbolicate")
+                                    enabled: currentModule !== null
+
+                                    onClicked:  {
+                                        models.functions.symbolicate(currentModule.id);
+                                    }
+                                }
+                            }
                         }
                     }
-                    RowLayout {
-                        visible: _scriptInstance !== null
+                }
 
-                        Layout.rightMargin: 5
-                        Layout.bottomMargin: 5
-                        Layout.leftMargin: 5
+                Rectangle {
+                    border {
+                        width: 1
+                        color:  "#666"
+                    }
 
-                        Button {
+                    color: "#ccc"
+
+                    ColumnLayout {
+                        x: 1
+                        y: 1
+                        width: parent.width - 2
+                        height: parent.height - 2
+
+                        SimpleTableView {
+                            id: blocksView
+
+                            model: models.blocks
+
                             Layout.fillWidth: true
-                            Layout.maximumWidth: 150
-                            property string _action: currentFunction !== null && currentFunction.probeActive ? "remove" : "add"
-                            text: _action === "add" ? qsTr("Add Probe") : qsTr("Remove Probe")
-                            enabled: currentFunction !== null
-                            onClicked: {
-                                if (_action === "add") {
-                                    models.functions.addProbe(currentFunction.id);
-                                } else {
-                                    models.functions.removeProbe(currentFunction.id);
-                                }
+                            Layout.fillHeight: true
+
+                            columnTitles: [qsTr("Block"), qsTr("Module")]
+                            columnWidths: [-2, -2]
+
+                            onCurrentRowChanged: {
+                                currentBlockId = model.data(model.index(currentRow, 0), "id") || null;
                             }
                         }
-                        Button {
-                            text: qsTr("Symbolicate")
-                            enabled: currentModule !== null
+                        RowLayout {
+                            visible: _scriptInstance !== null
 
-                            onClicked:  {
-                                models.functions.symbolicate(currentModule.id);
+                            Layout.rightMargin: 5
+                            Layout.bottomMargin: 5
+                            Layout.leftMargin: 5
+
+                            Button {
+                                text: qsTr("Symbolicate")
+
+                                onClicked:  {
+                                    models.blocks.symbolicate();
+                                }
                             }
                         }
                     }

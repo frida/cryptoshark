@@ -20,7 +20,8 @@ export class ThreadTracer implements Service {
 
         Stalker.follow(threadId, {
             events: {
-                call: true
+                compile: true,
+                call: true,
             },
             onCallSummary(summary) {
                 moduleMonitor.synchronize();
@@ -33,7 +34,23 @@ export class ThreadTracer implements Service {
                         summary: Object.entries(summary).map(([rawAddress, count]) => [moduleMonitor.resolve(ptr(rawAddress)), count])
                     }
                 });
-            }
+            },
+            onReceive(rawEvents) {
+                const blocks: Block[] = (Stalker.parse(rawEvents, { annotate: false, stringify: false }) as any)
+                    .filter((e: StalkerCompileEventBare | StalkerCallEventBare) => e.length === 2)
+                    .map(([start, end]: [NativePointer, NativePointer]): Block => [moduleMonitor.resolve(start), end.sub(start).toInt32()]);
+                if (blocks.length !== 0) {
+                    send({
+                        name: "thread:coverage",
+                        payload: {
+                            thread: {
+                                id: threadId
+                            },
+                            blocks
+                        }
+                    });
+                }
+            },
         });
     }
 
@@ -84,6 +101,8 @@ export class ThreadTracer implements Service {
 export interface ThreadSummary {
     [address: string]: CallTarget;
 }
+
+export type Block = [ModuleLocation | NativePointer, number];
 
 export interface CallTarget {
     symbol: ModuleSymbol | null;

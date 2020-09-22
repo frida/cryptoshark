@@ -8,7 +8,8 @@ Models *Models::s_instance = nullptr;
 Models::Models(QObject *parent) :
     QObject(parent),
     m_modules(nullptr),
-    m_functions(nullptr)
+    m_functions(nullptr),
+    m_blocks(nullptr)
 {
 }
 
@@ -36,8 +37,10 @@ void Models::open(QString name)
 
     m_modules = new Modules(this, m_db);
     m_functions = new Functions(this, m_db);
+    m_blocks = new Blocks(this, m_db);
     emit modulesChanged(m_modules);
     emit functionsChanged(m_functions);
+    emit blocksChanged(m_blocks);
 }
 
 void Models::close()
@@ -47,10 +50,13 @@ void Models::close()
 
     delete m_modules;
     delete m_functions;
+    delete m_blocks;
     m_modules = nullptr;
     m_functions = nullptr;
+    m_blocks = nullptr;
     emit modulesChanged(m_modules);
     emit functionsChanged(m_functions);
+    emit blocksChanged(m_blocks);
 
     auto connectionName = m_db.connectionName();
     m_db = QSqlDatabase();

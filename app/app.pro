@@ -18,6 +18,7 @@ SOURCES += \
     main.cpp \
     nativepointer.cpp \
     models.cpp \
+    models/blocks.cpp \
     models/functions.cpp \
     models/modules.cpp \
     radare.cpp \
@@ -35,6 +36,7 @@ macx:ICON = images/icon.icns
 HEADERS += \
     nativepointer.h \
     models.h \
+    models/blocks.h \
     models/functions.h \
     models/modules.h \
     radare.h \

@@ -88,6 +88,11 @@ bool Router::tryHandleStanza(QJsonObject stanza)
         auto summary = payload[QStringLiteral("summary")].toArray();
         Models::instance()->functions()->addCalls(summary);
         return true;
+    } else if (name == QStringLiteral("thread:coverage")) {
+        auto payload = stanza[QStringLiteral("payload")].toObject();
+        auto blocks = payload[QStringLiteral("blocks")].toArray();
+        Models::instance()->blocks()->addCoverage(blocks);
+        return true;
     } else if (name == QStringLiteral("function:log")) {
         auto entry = stanza[QStringLiteral("payload")].toObject();
         auto id = entry[QStringLiteral("id")].toInt();
