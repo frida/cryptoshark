@@ -18,6 +18,8 @@ TableView {
         const width = columnWidths[column];
         if (width === -1) {
             return tableView.width - columnWidths.reduce((total, width) => total + Math.max(width, 0), 0);
+        } else if (width === -2) {
+            return tableView.width / columnWidths.length;
         }
         return width;
     }
