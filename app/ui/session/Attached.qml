@@ -315,8 +315,8 @@ SplitView {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
 
-                            columnTitles: [qsTr("Block"), qsTr("Module")]
-                            columnWidths: [-2, -2]
+                            columnTitles: [qsTr("ID"), qsTr("Name")]
+                            columnWidths: [40, -1]
 
                             onCurrentRowChanged: {
                                 currentBlockId = model.data(model.index(currentRow, 0), "id") || null;

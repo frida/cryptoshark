@@ -9,7 +9,7 @@ Blocks::Blocks(QObject *parent, QSqlDatabase db) :
 {
     db.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS blocks ( \
         id INTEGER PRIMARY KEY, \
-        name TEXT NOT NULL UNIQUE, \
+        name TEXT UNIQUE, \
         module INTEGER, \
         offset INTEGER NOT NULL, \
         size INTEGER NOT NULL, \
@@ -21,21 +21,30 @@ Blocks::Blocks(QObject *parent, QSqlDatabase db) :
 
     m_getByLocation.prepare(QStringLiteral("SELECT id FROM blocks WHERE module = ? AND offset = ? LIMIT 1"));
     m_getByLocation.setForwardOnly(true);
-    m_getAddresses.prepare(QStringLiteral("SELECT blocks.id, modules.base + blocks.offset FROM blocks INNER JOIN modules ON modules.id = blocks.module"));
-    m_getAddresses.setForwardOnly(true);
-    m_insert.prepare(QStringLiteral("INSERT INTO blocks (name, module, offset, size) VALUES (?, ?, ?, ?)"));
+    m_getUnnamed.prepare(QStringLiteral("SELECT blocks.id, modules.base + blocks.offset FROM blocks "
+                                        "INNER JOIN modules ON modules.id = blocks.module "
+                                        "WHERE blocks.name IS NULL"));
+    m_getUnnamed.setForwardOnly(true);
+    m_insert.prepare(QStringLiteral("INSERT INTO blocks (module, offset, size) VALUES (?, ?, ?)"));
     m_insert.setForwardOnly(true);
     m_updateName.prepare(QStringLiteral("UPDATE blocks SET name = ? WHERE id = ?"));
     m_updateName.setForwardOnly(true);
 
     resetQuery();
-    setHeaderData(0, Qt::Horizontal, tr("Block"));
-    setHeaderData(1, Qt::Horizontal, tr("Module"));
+    setHeaderData(0, Qt::Horizontal, tr("ID"));
+    setHeaderData(1, Qt::Horizontal, tr("Name"));
 }
 
 void Blocks::resetQuery()
 {
-    setQuery(QStringLiteral("SELECT blocks.name, modules.name FROM blocks INNER JOIN modules ON modules.id = blocks.module"),
+    setQuery(QStringLiteral("SELECT "
+                                "blocks.id, "
+                                "IFNULL("
+                                    "blocks.name, "
+                                    "modules.name || '+' || printf('0x%x', blocks.offset)"
+                                ") as 'name' "
+                            "FROM blocks "
+                            "INNER JOIN modules ON modules.id = blocks.module"),
              m_database);
 }
 
@@ -67,8 +76,6 @@ void Blocks::addCoverage(QJsonArray blocks)
         m_getByLocation.addBindValue(offset);
         m_getByLocation.exec();
         if (!m_getByLocation.next()) {
-            QString name = module->name() + QStringLiteral("+0x") + QString::number(offset, 16);
-            m_insert.addBindValue(name);
             m_insert.addBindValue(moduleId);
             m_insert.addBindValue(offset);
             m_insert.addBindValue(size);
@@ -122,14 +129,17 @@ void Blocks::symbolicate()
 
     QVector<int> ids;
     QJsonArray addresses;
-    m_getAddresses.exec();
-    while (m_getAddresses.next()) {
-        auto id = m_getAddresses.value(0).toInt();
-        auto address = m_getAddresses.value(1).toULongLong();
+    m_getUnnamed.exec();
+    while (m_getUnnamed.next()) {
+        auto id = m_getUnnamed.value(0).toInt();
+        auto address = m_getUnnamed.value(1).toULongLong();
         ids += id;
         addresses += QJsonValue(QStringLiteral("0x") + QString::number(address, 16));
     }
-    m_getAddresses.finish();
+    m_getUnnamed.finish();
+
+    if (ids.empty())
+        return;
 
     QJsonArray args;
     args += addresses;

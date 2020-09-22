@@ -28,7 +28,7 @@ private:
 
     QSqlDatabase m_database;
     QSqlQuery m_getByLocation;
-    QSqlQuery m_getAddresses;
+    QSqlQuery m_getUnnamed;
     QSqlQuery m_insert;
     QSqlQuery m_updateName;
 };
