@@ -26,8 +26,7 @@ Models *Models::instance()
 
 void Models::open(QString name)
 {
-    if (m_db.isValid())
-        Models::close();
+    Models::close();
 
     m_db = QSqlDatabase::addDatabase("QSQLITE");
     m_db.setDatabaseName(dbFilePath(name));
