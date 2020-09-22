@@ -11,8 +11,7 @@ static QString archFromFrida(QString name);
 
 RadareController::RadareController(QObject *parent) :
     QObject(parent),
-    m_core(r_core_new()),
-    m_worker(new RadareWorker(m_core)),
+    m_worker(new RadareWorker()),
     m_nextRequestId(1)
 {
     std::memset(&m_plugin, 0, sizeof(m_plugin));
@@ -24,11 +23,11 @@ RadareController::RadareController(QObject *parent) :
     m_plugin.lseek = onSeekWrapper;
     m_plugin.write = onWriteWrapper;
     m_plugin.check = onCheckWrapper;
-    r_io_plugin_add(m_core->io, &m_plugin);
 
     m_worker->moveToThread(&m_thread);
     connect(&m_thread, &QThread::finished, m_worker, &QObject::deleteLater);
     connect(this, &RadareController::initializeRequest, m_worker, &RadareWorker::handleInitializeRequest);
+    connect(this, &RadareController::deinitializeRequest, m_worker, &RadareWorker::handleDeinitializeRequest);
     connect(this, &RadareController::executeRequest, m_worker, &RadareWorker::handleExecuteRequest);
     connect(m_worker, &RadareWorker::executeResponse, this, &RadareController::executeResponse);
     m_thread.start();
@@ -42,7 +41,6 @@ RadareController::~RadareController()
 {
     m_thread.quit();
     m_thread.wait();
-    r_core_free(m_core);
 
     s_instance = nullptr;
 }
@@ -56,7 +54,13 @@ RadareController *RadareController::instance()
 
 void RadareController::initialize(QString platformName, QString archName, int pointerSize)
 {
-    emit initializeRequest(platformName, archName, pointerSize);
+    RIOPlugin *plugin = static_cast<RIOPlugin *>(r_mem_dup(&m_plugin, sizeof(m_plugin)));
+    emit initializeRequest(plugin, platformName, archName, pointerSize);
+}
+
+void RadareController::deinitialize()
+{
+    emit deinitializeRequest();
 }
 
 int RadareController::execute(QString command)
@@ -210,36 +214,40 @@ bool RadareController::onCheck(RIO *io, const char *pathname, bool many)
     return r_str_startswith(pathname, "cs://");
 }
 
-RadareWorker::RadareWorker(RCore *core, QObject *parent) :
+RadareWorker::RadareWorker(QObject *parent) :
     QObject(parent),
-    m_state(State::Created),
-    m_core(core)
+    m_core(nullptr)
 {
 }
 
-void RadareWorker::handleInitializeRequest(QString platformName, QString archName, int pointerSize)
+RadareWorker::~RadareWorker()
+{
+    r_core_free(m_core);
+}
+
+void RadareWorker::handleInitializeRequest(RIOPlugin *plugin, QString platformName, QString archName, int pointerSize)
 {
     Q_UNUSED(platformName);
 
+    r_core_free(m_core);
+    m_core = r_core_new();
+    r_io_plugin_add(m_core->io, plugin);
+
+    r_core_task_sync_begin(&m_core->tasks);
+
     RConfig *config = m_core->config;
 
-    if (m_state == State::Created) {
-        r_core_task_sync_begin(&m_core->tasks);
+    const char *uri = "cs:///";
+    const ut64 loadAddress = 0;
+    r_core_file_open(m_core, uri, R_PERM_RWX, loadAddress);
+    r_core_cmd0(m_core, "=!");
+    r_core_bin_load(m_core, uri, loadAddress);
 
-        const char *uri = "cs:///";
-        const ut64 loadAddress = 0;
-        r_core_file_open(m_core, uri, R_PERM_RWX, loadAddress);
-        r_core_cmd0(m_core, "=!");
-        r_core_bin_load(m_core, uri, loadAddress);
-
-        r_config_set(config, "scr.html", "true");
-        r_config_set(config, "scr.utf8", "true");
-        r_config_set_i(config, "scr.color", COLOR_MODE_16M);
-        r_config_set(config, "asm.emu", "true");
-        r_config_set(config, "emu.str", "true");
-
-        m_state = State::Initialized;
-    }
+    r_config_set(config, "scr.html", "true");
+    r_config_set(config, "scr.utf8", "true");
+    r_config_set_i(config, "scr.color", COLOR_MODE_16M);
+    r_config_set(config, "asm.emu", "true");
+    r_config_set(config, "emu.str", "true");
 
     QByteArray radareOSName = platformName.toUtf8();
     r_config_set(config, "asm.os", radareOSName.data());
@@ -248,8 +256,19 @@ void RadareWorker::handleInitializeRequest(QString platformName, QString archNam
     r_config_set_i(config, "asm.bits", pointerSize * 8);
 }
 
+void RadareWorker::handleDeinitializeRequest()
+{
+    r_core_free(m_core);
+    m_core = nullptr;
+}
+
 void RadareWorker::handleExecuteRequest(QString command, int requestId)
 {
+    if (m_core == nullptr) {
+        emit executeResponse(QStringLiteral("Invalid operation"), requestId);
+        return;
+    }
+
     auto commandStr = command.toUtf8();
     char *resultStr = r_core_cmd_str(m_core, commandStr.data());
     QString result;

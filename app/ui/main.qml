@@ -45,6 +45,7 @@ ApplicationWindow {
         _endReason = null;
         _models.close();
         _models = null;
+        radare.deinitialize();
     }
 
     title: qsTr("Cryptoshark")

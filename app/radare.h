@@ -22,10 +22,12 @@ public:
     static RadareController *instance();
 
     Q_INVOKABLE void initialize(QString platformName, QString archName, int pointerSize);
+    Q_INVOKABLE void deinitialize();
     Q_INVOKABLE int execute(QString command);
 
 signals:
-    void initializeRequest(QString platformName, QString archName, int pointerSize);
+    void initializeRequest(RIOPlugin *plugin, QString platformName, QString archName, int pointerSize);
+    void deinitializeRequest();
     void executeRequest(QString command, int requestId);
     void executeResponse(QString response, int requestId);
 
@@ -65,20 +67,18 @@ class RadareWorker : public QObject
     Q_DISABLE_COPY_MOVE(RadareWorker)
 
 public:
-    enum class State { Created, Initialized };
-    Q_ENUM(State)
-
-    explicit RadareWorker(RCore *core, QObject *parent = nullptr);
+    explicit RadareWorker(QObject *parent = nullptr);
+    virtual ~RadareWorker();
 
 public slots:
-    void handleInitializeRequest(QString platformName, QString archName, int pointerSize);
+    void handleInitializeRequest(RIOPlugin *plugin, QString platformName, QString archName, int pointerSize);
+    void handleDeinitializeRequest();
     void handleExecuteRequest(QString command, int requestId);
 
 signals:
     void executeResponse(QString response, int requestId);
 
 private:
-    State m_state;
     RCore *m_core;
 };
 
