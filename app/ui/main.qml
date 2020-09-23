@@ -207,9 +207,9 @@ ApplicationWindow {
                 "afbj"
             ].join("; "), result => {
                                      const lineBreak = "<br />";
-                                     const lastBrOffset = result.lastIndexOf(lineBreak);
-                                     const disasm = result.substr(0, lastBrOffset);
-                                     const blocks = result.substr(lastBrOffset + 6);
+                                     const lastBrPos = result.lastIndexOf(lineBreak);
+                                     const disasm = result.substr(0, lastBrPos);
+                                     const blocks = result.substr(lastBrPos + 6);
 
                                      // XXX: We cannot JSON.parse() here as memory addresses are represented by numbers,
                                      //      which means we may lose bits.
@@ -218,6 +218,7 @@ ApplicationWindow {
 
                                      let current = {
                                          status: "none",
+                                         block: null,
                                          lines: []
                                      };
                                      const items = [current];
@@ -226,10 +227,12 @@ ApplicationWindow {
                                          const m = line.match(/(0x[0-9a-f]{4,})/);
                                          if (m !== null) {
                                              const address = m[1];
-                                             const status = blockMap[address];
-                                             if (status !== undefined) {
+                                             const details = blockMap[address];
+                                             if (details !== undefined) {
+                                                 const { id = null } = details;
                                                  current = {
-                                                     status,
+                                                     status: (id !== null) ? "executed" : "pending",
+                                                     block: id,
                                                      lines: []
                                                  };
                                                  items.push(current);
@@ -239,21 +242,7 @@ ApplicationWindow {
                                          current.lines.push(line);
                                      }
 
-                                     const styles = {
-                                         none: "",
-                                         pending: ` style="background-color: #f2a4a2"`,
-                                         executed: ` style="background-color: #cdfdc6"`,
-                                     };
-
-                                     const html = items.map(({ status, lines }, index) => {
-                                                                const marker = `<span${styles[status]}>&nbsp;</span>`;
-                                                                return ((index > 0) ? lineBreak : "") + lines.map(l => {
-                                                                                                                      const startIndex = l.indexOf("&nbsp;");
-                                                                                                                      return marker + l.substr(startIndex);
-                                                                                                                  }).join(lineBreak);
-                                                            }).join("\n");
-
-                                     callback(html);
+                                     callback(items);
                                  });
         }
 

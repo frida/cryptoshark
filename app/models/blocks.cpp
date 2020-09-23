@@ -132,13 +132,17 @@ QJsonObject Blocks::resolveBlockAddresses(QJsonArray addresses, Module *module)
         auto address = addressValue.toString().toULongLong();
         int offset = address - base;
 
+        QJsonObject details;
         m_getByLocation.addBindValue(moduleId);
         m_getByLocation.addBindValue(offset);
         m_getByLocation.exec();
-        QString status = m_getByLocation.next() ? "executed" : "pending";
+        if (m_getByLocation.next()) {
+            auto blockId = m_getByLocation.value(0).toInt();
+            details[QStringLiteral("id")] = blockId;
+        }
         m_getByLocation.finish();
 
-        result[QStringLiteral("0x") + QString::number(address, 16)] = status;
+        result[QStringLiteral("0x") + QString::number(address, 16)] = details;
     }
 
     return result;

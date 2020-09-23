@@ -22,6 +22,7 @@ SplitView {
     property var endReason: ""
 
     property var _scriptInstance: agentService.instances[0] ?? null
+    property var _ignoringBlockIdChanges: false
 
     onCurrentModuleChanged: {
         models.functions.load(currentModule !== null ? currentModule.id : -1);
@@ -36,6 +37,8 @@ SplitView {
     }
 
     onCurrentBlockIdChanged: {
+        if (_ignoringBlockIdChanges)
+            return;
         const blockId = currentBlockId;
         if (blockId === null)
             return;
@@ -54,15 +57,15 @@ SplitView {
     }
 
     function _refreshDisassembly() {
-        disassembly.text = "";
+        disassembly.items = [];
 
         const func = currentFunction;
         if (func === null)
             return;
 
         disassembly.loading = true;
-        agentService.disassemble(func, text => {
-            disassembly.text = text;
+        agentService.disassemble(func, items => {
+            disassembly.items = items;
             disassembly.loading = false;
         });
     }
@@ -320,6 +323,22 @@ SplitView {
                         SimpleTableView {
                             id: blocksView
 
+                            function selectAndScrollTo(id) {
+                                const index = id - 1;
+                                currentRow = index;
+
+                                const rowHeight = ((contentHeight / rows) + 0.5) >>> 0;
+                                const rowCenterY = (index * rowHeight) + (rowHeight / 2);
+
+                                const viewportHeight = height;
+                                const scrollY = rowCenterY - (viewportHeight / 2);
+
+                                const actualContentHeight = rows * rowHeight;
+                                const minY = -topMargin;
+                                const maxY = actualContentHeight - viewportHeight;
+                                contentY = Math.min(Math.max(scrollY, minY), maxY);
+                            }
+
                             model: models.blocks
 
                             Layout.fillWidth: true
@@ -423,6 +442,17 @@ SplitView {
 
                 SplitView.fillWidth: true
                 SplitView.fillHeight: true
+
+                disassemblyFont: fixedFont
+
+                onNavigationRequest: {
+                    if (type === "block") {
+                        bar.currentIndex = 1;
+                        _ignoringBlockIdChanges = true;
+                        blocksView.selectAndScrollTo(id);
+                        _ignoringBlockIdChanges = false;
+                    }
+                }
             }
 
             ColumnLayout {
