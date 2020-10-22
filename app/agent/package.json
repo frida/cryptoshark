@@ -23,13 +23,14 @@
   "readmeFilename": "README.md",
   "scripts": {
     "prepare": "npm run build",
-    "build": "frida-compile index.ts -o ../agent.js -xXc",
-    "watch": "frida-compile index.ts -o ../agent.js -xXw"
+    "build": "frida-compile index.ts -o ../agent.qjs -bc",
+    "watch": "frida-compile index.ts -o ../agent.qjs -bw"
   },
   "devDependencies": {
     "@types/frida-gum": "^16.2.0",
-    "@types/node": "^14.11.1",
-    "frida-compile": "^9.5.2"
+    "@types/node": "^14.14.2",
+    "frida": "^14.0.0",
+    "frida-compile": "^10.0.0"
   },
   "engines": {
     "node": ">=10.0.0"

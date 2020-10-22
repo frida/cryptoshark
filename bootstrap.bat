@@ -2,7 +2,7 @@
 
 setlocal EnableDelayedExpansion
 
-set __CS_FRIDA_VERSION=12.11.17
+set __CS_FRIDA_VERSION=14.0.0
 
 set __CS_ARCH=%1
 if "!__CS_ARCH!" == "" (
@@ -52,7 +52,7 @@ if not exist ext\radare2\build\priv_install_dir\lib\libr_core.a (
   call tools\windows\build-radare.bat || exit /b
 )
 
-if not exist app\agent.js (
+if not exist app\agent.qjs (
   echo.
   echo ***
   echo *** Building Agent

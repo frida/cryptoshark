@@ -32,9 +32,10 @@ Run the `build` script.  This will output a binary at:
 
 Run the `bootstrap` script and then open `cryptoshark.pro` in Qt Creator.
 
-### Building agent.js
+### Building agent.qjs
 
-This is the blob of JavaScript that Cryptoshark injects into target processes.
+This is the bytecode representation of the JavaScript that Cryptoshark injects
+into target processes.
 
 For a one-off build:
 
@@ -47,7 +48,7 @@ And to watch while developing:
     $ npm run watch
 
 This will monitor the TypeScript source code and incrementally compile
-`app/agent.js`. Note that the agent is included as a resource, so remember to
+`app/agent.qjs`. Note that the agent is included as a resource, so remember to
 `build`.
 
 ## Building a portable binary
