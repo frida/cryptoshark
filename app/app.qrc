@@ -1,7 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>ui/main.qml</file>
-        <file>agent.qjs</file>
+        <file>agent.js</file>
         <file>ui/session/Attached.qml</file>
         <file>ui/session/Attaching.qml</file>
         <file>ui/session/Detached.qml</file>

@@ -50,7 +50,7 @@ if [ ! -f ext/radare2/build/priv_install_dir/lib/libr_core.a ]; then
   tools/unix/build-radare || exit $?
 fi
 
-if [ ! -f app/agent.qjs ]; then
+if [ ! -f app/agent.js ]; then
   echo ""
   echo "***"
   echo "*** Building Agent"

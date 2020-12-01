@@ -52,7 +52,7 @@ if not exist ext\radare2\build\priv_install_dir\lib\libr_core.a (
   call tools\windows\build-radare.bat || exit /b
 )
 
-if not exist app\agent.qjs (
+if not exist app\agent.js (
   echo.
   echo ***
   echo *** Building Agent
