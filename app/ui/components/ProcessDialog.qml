@@ -58,9 +58,21 @@ Controls.Dialog {
             boundsBehavior: Flickable.StopAtBounds
 
             delegate: Controls.ItemDelegate {
-                text: name
-                icon.source: smallIcon
                 width: (parent !== null) ? parent.width : 50
+                leftPadding: 35
+
+                text: name
+
+                Image {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 16
+                    fillMode: Image.PreserveAspectFit
+
+                    source: icons[icons.length - 1] ?? ""
+                }
+
                 highlighted: ListView.isCurrentItem
                 onClicked: processes.currentIndex = index
                 onDoubleClicked: dialog.accept()
@@ -75,6 +87,7 @@ Controls.Dialog {
     ProcessListModel {
         id: processModel
         device: (devices.currentIndex !== -1) ? deviceModel.get(devices.currentIndex) : null
+        scope: Frida.Scope.Full
 
         onError: {
             processErrorDialog.text = message;
