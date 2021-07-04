@@ -20,7 +20,7 @@ RadareController::RadareController(QObject *parent) :
     m_plugin.license = "wxWindows Library Licence, Version 3.1";
     m_plugin.open = onOpenWrapper;
     m_plugin.read = onReadWrapper;
-    m_plugin.lseek = onSeekWrapper;
+    m_plugin.seek = onSeekWrapper;
     m_plugin.write = onWriteWrapper;
     m_plugin.check = onCheckWrapper;
 
